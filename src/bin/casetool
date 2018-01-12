@@ -218,7 +218,7 @@ do
             ;;
 
         --version)
-            casetool::version
+            casetools::version
             shift
             exit 0
             ;;
