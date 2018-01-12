@@ -21,6 +21,6 @@ lib_path="${local_path}/${package_name}-${CASETOOLS_VERSION}"
 . "${lib_path}/cloning"
 . "$(bashlib --lib)"
 
-casetool::version() {
+casetools::version() {
     echo "${CASETOOLS_VERSION}"
 }
