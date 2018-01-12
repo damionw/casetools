@@ -1,0 +1,236 @@
+#! /usr/bin/env bash
+
+first_name="${BASH_SOURCE[0]}"
+actual_name="$(readlink -f "${first_name}")"
+local_path="$(dirname "${actual_name}")"
+library_import_file="$(readlink -f "${local_path}/../lib/casetool")"
+
+#===================================================================================
+#                          Import tools library
+#===================================================================================
+. "${library_import_file}"
+
+if ! . "$(bashlib --lib)"
+then
+    logging::fatal "bashlib module requirement not satistified"
+fi
+
+#===================================================================================
+#                              Logging Options
+#===================================================================================
+logging::set_severity info
+
+#===================================================================================
+#                                Defaults
+#===================================================================================
+export CASETOOLS_BASE="${CASETOOLS_BASE:-${HOME}/Projects}"
+export CASETOOLS_CASE="${CASETOOLS_CASE}"
+export CASETOOLS_HOME="${CASETOOLS_BASE}/${CASETOOLS_CASE}"
+
+#===================================================================================
+#                              Help Message
+#===================================================================================
+showhelp()
+{
+    contents=$(
+        echo "${*}" |
+        awk -F, '{for (i=1; i <= NF; ++i) {print $i;}}' |
+        awk -F: '{printf("%s[--%s%s]", sep, $1, (NF == 2 ? sprintf("=<%s>", $1) : "")); sep=" "}'
+    )
+
+    echo "Usage: $0 ${contents}" >&2
+}
+
+#===================================================================================
+# NOTE: There is a bug in getopts where not specifying at least one short option
+#       will cause the first non option parameter to be discarded. Here, we just
+#       use -h (help)
+#===================================================================================
+long_options="help,version,debug,error,info,warning,fatal,lib,case::,shell,console,description::,module::,modules::,list,update,requirements,date,browse,exec:"
+
+OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
+
+if [ $? != 0 ]
+then
+    logging::fatal "Invalid command line options ${OPTION_TEMP}"
+fi
+
+eval set -- "$OPTION_TEMP"
+
+#===================================================================================
+#                       Process command line parameters
+#
+# NOTE: The command line parameters are available for scripts which
+#       source this file.
+#===================================================================================
+if [ -d "${CASETOOLS_BASE}" ]
+then
+    :
+elif mkdir -p "${CASETOOLS_BASE}"
+then
+    logging::warning "Created case folder in '${CASETOOLS_BASE}'"
+else
+    logging::fatal "Can't use casetool environments in folder '${CASETOOLS_BASE}'"
+fi
+
+while true
+do
+    case "$1" in
+        --debug|--info|--warning|--fatal|--error)
+            logging::set_severity "$(echo "${1}" | sed -e 's/^[\-]*//g')"
+            shift
+            ;;
+
+        --list)
+            cases::list
+            shift
+            ;;
+
+        --module|--modules)
+            if [ -z "${2}" ]
+            then
+                cases::requirements
+            else
+                cases::module "${2}"
+            fi
+
+            shift 2
+            ;;
+
+        --requirements)
+            cases::requirements
+            shift
+            ;;
+
+        --date)
+            cases::date
+            shift
+            ;;
+
+        --description)
+            cases::description "${2}"
+            shift 2
+            ;;
+
+        --update)
+            _requirements="$(cases::requirements)"
+
+            echo "${_requirements}" | while read _url
+            do
+                cases::module "${_url}"
+            done
+
+            shift
+            ;;
+
+        --case)
+            if [ -n "${2}" ]
+            then
+                _name="${2}"
+                _case="$(echo "${_name}" | url::encode)"
+                _case_folder="${CASETOOLS_BASE}/${_case}"
+                _just_created=false
+
+                if [ -d "${_case_folder}" ]
+                then
+                    :
+                elif ! cases::create "${_case_folder}" "${_name}"
+                then
+                    logging::fatal "Cannot create case in '${_case_folder}'"
+                else
+                    _just_created=true
+                fi
+
+                if . "${_case_folder}/Environment/bin/activate"
+                then
+                    logging::warning "Selected virtual environment in '$(virtualenv::path)'"
+                    export CASETOOLS_CASE="${_case}" CASETOOLS_HOME="${CASETOOLS_BASE}/${_case}"
+                else
+                    logging::fatal "Cannot select virtual environment in '${_case_folder}'"
+                fi
+
+                if ${_just_created}
+                then
+                    cases::module "https://github.com/damionw/webserve.git" &&
+                    cases::description "${_name}" ||
+                    logging::fatal "Cannot install required modules"
+                fi
+            elif [ -n "${CASETOOLS_CASE}" ]
+            then
+                echo "Selected case '$(echo "${CASETOOLS_CASE}" | url::decode)' in folder '${CASETOOLS_BASE}'"
+            else
+                echo "No case has been selected"
+            fi
+
+            shift 2
+            ;;
+
+        --browse)
+            _folder="$(cases::selected)" && xdg-open "${_folder}"
+            shift
+            ;;
+
+        --exec)
+            _command="${2}"
+            shift 2
+
+            if ! _folder="$(cases::selected)" _case="$(cases::case)"
+            then
+                logging::fatal "No environment selected"
+                _status=$?
+            else
+                logging::warning "Entering environment $(virtualenv::path)"
+
+                (
+                    cd "${_folder}" &&
+                    ENV="${_folder}/.profile" exec bash --noprofile -c ". .profile; ${_command}" && _status=$?
+                )
+                _status=$?
+
+                logging::warning "Exiting environment $(virtualenv::path)"
+            fi
+
+            exit ${_status}
+            ;;
+
+        --shell|--console)
+            if _folder="$(cases::selected)" _case="$(cases::case)"
+            then
+                logging::warning "Entering environment $(virtualenv::path)"
+
+                (
+                    cd "${_folder}" &&
+                    _rc_options="$(test -f .profile && echo --posix || echo --norc)" &&
+                    ENV="${_folder}/.profile" HISTFILE="${_folder}/.bash_history" PS1="[${_case}]> " exec bash --noprofile ${_rc_options} -i <&2 >&2
+                )
+
+                logging::warning "Exiting environment $(virtualenv::path)"
+            fi
+
+            shift
+            exit 0
+            ;;
+
+        --lib)
+            echo "${library_import_file}"
+            shift
+            exit 0
+            ;;
+
+        --version)
+            casetool::version
+            shift
+            exit 0
+            ;;
+
+        --)
+            shift
+            break
+            ;;
+
+        *)
+            showhelp "${long_options}" >&2
+            exit 0
+            ;;
+    esac
+done

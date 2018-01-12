@@ -1,0 +1,88 @@
+#! /usr/bin/env bash
+
+#===================================================================================
+#                          Import tools library
+#===================================================================================
+. "$(casetool --lib)"
+
+#===================================================================================
+#                              Logging Options
+#===================================================================================
+logging::set_severity info
+
+#===================================================================================
+#                              Help Message
+#===================================================================================
+showhelp()
+{
+    contents=$(
+        echo "${*}" |
+        awk -F, '{for (i=1; i <= NF; ++i) {print $i;}}' |
+        awk -F: '{printf("%s[--%s%s]", sep, $1, (NF == 2 ? sprintf("=<%s>", $1) : "")); sep=" "}'
+    )
+
+    echo "Usage: $0 ${contents}" >&2
+}
+
+if cases::running_in_gui
+then
+    logging::fatal() {
+        kdialog --error "$*"
+        exit 255
+    }
+fi
+
+#===================================================================================
+# NOTE: There is a bug in getopts where not specifying at least one short option
+#       will cause the first non option parameter to be discarded. Here, we just
+#       use -h (help)
+#===================================================================================
+long_options="help,version,debug,error,info,warning,fatal,url:,case:"
+
+OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
+
+if [ $? != 0 ]
+then
+    logging::fatal "Invalid command line options ${OPTION_TEMP}"
+fi
+
+eval set -- "$OPTION_TEMP"
+
+#===================================================================================
+#                       Process command line parameters
+#
+# NOTE: The command line parameters are available for scripts which
+#       source this file.
+#===================================================================================
+casename="$(echo "${CASETOOLS_CASE}" | url::decode)"
+
+while true
+do
+    case "$1" in
+        --debug|--info|--warning|--fatal|--error)
+            logging::set_severity "$(echo "${1}" | sed -e 's/^[\-]*//g')"
+            shift
+            ;;
+
+        --case)
+            casename="${2}"
+            shift 2
+            ;;
+
+        --url)
+            logging::info "Cloning from '${2}'"
+            casetool --case="${casename:?Need to specify a case}" --exec ". \"\$(casetool --lib)\"; cases::clone '${2}'"
+            shift 2
+            ;;
+
+        --)
+            shift
+            break
+            ;;
+
+        *)
+            showhelp "${long_options}" >&2
+            exit 0
+            ;;
+    esac
+done

@@ -1,0 +1,108 @@
+#! /usr/bin/env bash
+
+#===================================================================================
+#                          Import tools library
+#===================================================================================
+. "$(casetool --lib)"
+
+#===================================================================================
+#                              Logging Options
+#===================================================================================
+logging::set_severity info
+
+#===================================================================================
+#                              Help Message
+#===================================================================================
+showhelp()
+{
+    contents=$(
+        echo "${*}" |
+        awk -F, '{for (i=1; i <= NF; ++i) {print $i;}}' |
+        awk -F: '{printf("%s[--%s%s]", sep, $1, (NF == 2 ? sprintf("=<%s>", $1) : "")); sep=" "}'
+    )
+
+    echo "Usage: $0 ${contents}" >&2
+}
+
+if cases::running_in_gui
+then
+    logging::fatal() {
+        kdialog --error "$*"
+        exit 255
+    }
+fi
+
+#===================================================================================
+# NOTE: There is a bug in getopts where not specifying at least one short option
+#       will cause the first non option parameter to be discarded. Here, we just
+#       use -h (help)
+#===================================================================================
+long_options="help,version,debug,error,info,warning,fatal,new"
+
+OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
+
+if [ $? != 0 ]
+then
+    logging::fatal "Invalid command line options ${OPTION_TEMP}"
+fi
+
+eval set -- "$OPTION_TEMP"
+
+#===================================================================================
+#                       Process command line parameters
+#
+# NOTE: The command line parameters are available for scripts which
+#       source this file.
+#===================================================================================
+prompt="Please provide a case name"
+create_new=false
+
+while true
+do
+    case "$1" in
+        --debug|--info|--warning|--fatal|--error)
+            logging::set_severity "$(echo "${1}" | sed -e 's/^[\-]*//g')"
+            shift
+            ;;
+
+        --new)
+            create_new=true
+            shift
+            ;;
+
+        --)
+            shift
+            break
+            ;;
+
+        *)
+            showhelp "${long_options}" >&2
+            exit 0
+            ;;
+    esac
+done
+
+if ! cases::running_in_gui
+then
+    read -p "${prompt}: " -t 30 case_name
+elif $create_new
+then
+    case_name=$(kdialog --inputbox "$prompt")
+else
+    choices=()
+
+    while read _row
+    do
+        choices[${#choices[@]}]="${_row}"
+    done <<<"$(casetool --list)"
+
+    case_name=$(kdialog --combobox "$prompt" "${choices[@]}")
+fi
+
+if [ $? = 0 ]
+then
+    casetool --case="${case_name}" --browse
+elif $create_new
+then
+    logging::fatal "Exiting: No case name provided"
+fi
