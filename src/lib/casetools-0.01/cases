@@ -46,7 +46,7 @@ cases::case() {
 }
 
 cases::selected() {
-    local _folder="${CASETOOSL_BASE}/${CASETOOLS_CASE}"
+    local _folder="${CASETOOLS_BASE}/${CASETOOLS_CASE}"
 
     if [ -z "${CASETOOLS_BASE}" ]
     then
