@@ -3,7 +3,7 @@
 first_name="${BASH_SOURCE[0]}"
 actual_name="$(readlink -f "${first_name}")"
 local_path="$(dirname "${actual_name}")"
-library_import_file="$(readlink -f "${local_path}/../lib/casetool")"
+library_import_file="$(readlink -f "${local_path}/../lib/casetools")"
 
 #===================================================================================
 #                          Import tools library
@@ -218,7 +218,7 @@ do
             ;;
 
         --version)
-            casetool::version
+            casetools::version
             shift
             exit 0
             ;;
