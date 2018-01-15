@@ -27,10 +27,12 @@ cases::list() {
     then
         logging::fatal "No Cases home domain has been selected"
     else
-        find "${_folder}" -mindepth 1 -maxdepth 1 -type d -printf "%f\n" | while read _case
+        find "${_folder}" -mindepth 1 -maxdepth 1 -type d -printf "%f\n" |
+        while read _case
         do
             echo "${_case}" | url::decode
-        done
+        done |
+        sort
     fi
 }
 
