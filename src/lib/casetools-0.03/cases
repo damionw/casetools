@@ -145,6 +145,19 @@ cases::create() {
             echo 'set +o posix # Turn off Posix mode set by environment launcher'
             echo '. $(bashlib --lib)'
             echo 'export PATH="$(readlink -f Tools):$PATH"'
+
+            sed -e 's/^                //g' <<< '
+                cd() {
+                    if [ -z "$1" ]
+                    then
+                        where="${CASETOOLS_HOME:-${HOME}}"
+                    else
+                        where="$1"
+                    fi
+
+                    command cd "${where}"
+                }
+            '
         } >> "${_path}/.profile"
 
         format_desktop_item "${_name}" "casetool --case='${_name}' --browse" > "${_path}/Desktop/Browse"
