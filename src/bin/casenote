@@ -86,19 +86,5 @@ done
 
 casetool --case="${casename}" --exec='
     . "$(casetool --lib)"
-    _notes="$(cases::folder::notes)"
-
-    next_number=$((
-        $(
-            {
-                find "${_notes}" -name "Note.[0-9]*.txt" -printf "%f\n" |
-                grep '"'"'[\.][0-9][0-9]*[\.]txt'"'"' |
-                awk -F. '"'"'{print $(NF - 1);}'"'"' |
-                sort -nr
-                echo 0
-            } | head -1
-        ) + 1
-    ))
-
-    exec kate -n "${_notes}/Note.${next_number}.txt"
+    exec kate -n "$(cases::folder::notes)/$(date "note-+%Y-%m-%d:%H:%M.txt")"
 '
