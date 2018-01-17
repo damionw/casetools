@@ -46,7 +46,7 @@ showhelp()
 #       will cause the first non option parameter to be discarded. Here, we just
 #       use -h (help)
 #===================================================================================
-long_options="help,version,debug,error,info,warning,fatal,lib,case::,shell,console,description::,module::,modules::,list,update,requirements,date,browse,exec:,where"
+long_options="help,version,debug,error,info,warning,fatal,lib,case::,shell,console,description::,module::,modules::,list,update,requirements,date,browse,exec:,where,home"
 
 OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
 
@@ -79,6 +79,12 @@ do
         --debug|--info|--warning|--fatal|--error)
             logging::set_severity "$(echo "${1}" | sed -e 's/^[\-]*//g')"
             shift
+            ;;
+
+        --home)
+            echo ${CASETOOLS_BASE}
+            shift
+            exit 0
             ;;
 
         --list)
