@@ -151,6 +151,7 @@ do
                 then
                     logging::warning "Selected virtual environment in '$(virtualenv::path)'"
                     export CASETOOLS_CASE="${_case}" CASETOOLS_HOME="${CASETOOLS_BASE}/${_case}"
+                    export LD_LIBRARY_PATH="$(virtualenv::path)/lib:${LD_LIBRARY_PATH}"
                 else
                     logging::fatal "Cannot select virtual environment in '${_case_folder}'"
                 fi
