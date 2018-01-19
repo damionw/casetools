@@ -30,15 +30,53 @@ export CASETOOLS_HOME="${CASETOOLS_BASE}/${CASETOOLS_CASE}"
 #===================================================================================
 #                              Help Message
 #===================================================================================
-showhelp()
-{
-    contents=$(
-        echo "${*}" |
-        awk -F, '{for (i=1; i <= NF; ++i) {print $i;}}' |
-        awk -F: '{printf("%s[--%s%s]", sep, $1, (NF == 2 ? sprintf("=<%s>", $1) : "")); sep=" "}'
+showhelp() {
+    local _synopsis="
+        Manage Project Cases
+    "
+
+    declare -A _keywords=(
+        ["case::"]="Select a project or provide the currently selected project"
+        [shell]="Run a console shell in the selected project virtualenv",
+        [console]="Run a console shell in the selected project's virtualenv",
+        [description::]="Provide or display the project's description",
+        [module::]="Provide a git package dependency or list the project's existing dependencies",
+        [modules::]="Provide a git package dependency or list the project's existing dependencies",
+        [list]="List the known project names",
+        [update]="Refresh all of the project dependencies",
+        [requirements]="List the project's existing dependencies",
+        [date]="Provide the project's creation date",
+        [browse]="Open a file browser in the project's home directory",
+        [exec:]="Run a shell command in the selected project's virtualenv",
+        [where]="Display the project's home directory",
+        [home]="Display the base directory where the projects are contained",
+        [help]="Display instructions"
     )
 
-    echo "Usage: $0 ${contents}" >&2
+    local _terms="$(echo "${@}" | awk -F, '{for (i=1; i <= NF; ++i) {print $i;}}')"
+    local _topic
+
+    local _contents="$(
+        echo "${_terms}" | awk -F: '{printf("%s[--%s%s]", sep, $1, (NF == 2 ? sprintf("=<%s>", $1) : "")); sep=" "}'
+        echo -en "${_synopsis:+\n}"
+        echo "${_synopsis}" | sed -e 's/^[ ]*//g' -e '/^[ ]*$/d'
+
+        echo "${_terms}" | {
+            _prefix="\n"
+
+            while read _topic
+            do
+                if [ -n "${_keywords["${_topic}"]}" ]
+                then
+                    _fill="$(for ((i=$(echo -n "${_topic}" | wc -c); i < 15; ++i)); do echo -n " "; done)"
+                    echo -e "${_prefix}--${_topic}${_fill}${_keywords["${_topic}"]}" | sed -e 's/^./    &/g'
+                    _prefix=""
+                fi
+            done
+        }
+    )"
+
+    echo "Usage: $0 ${_contents}" >&2
 }
 
 #===================================================================================
