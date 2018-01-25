@@ -140,6 +140,9 @@ cases::create() {
         echo "No description for this case yet" > "${_path}/README"
         date '+%Y-%m-%d' > ${_path}/CREATED
 
+        #------------------------------------
+        # Configure freedesktop files
+        #------------------------------------
         {
             echo '#! /usr/bin/env bash'
             echo 'set +o posix # Turn off Posix mode set by environment launcher'
@@ -160,11 +163,24 @@ cases::create() {
             '
         } >> "${_path}/.profile"
 
+        {
+            echo "[Desktop Entry]"
+            echo "Icon=/usr/share/icons/hicolor/48x48/ksplash.png"
+        } > "${_path}/.directory"
+
+        {
+            echo "[Desktop Entry]"
+            echo "Icon=/usr/share/icons/"
+        } > "${_path}/Desktop/.directory"
+
         format_desktop_item "${_name}" "casetool --case='${_name}' --browse" > "${_path}/Desktop/Browse"
         format_desktop_item "${_name}" "konsole -p colors=Casetool -e casetool --case='${_name}' --console" > "${_path}/Desktop/Console"
         format_desktop_item "${_name}" "caseclone --case='${_name}' --url='%U'" > "${_path}/Desktop/Clone"
         format_desktop_item "${_name}" "casenote --case='${_name}'" > "${_path}/Desktop/Add a Note"
 
+        #------------------------------------
+        #              Permissions
+        #------------------------------------
         chmod u+rx "${_path}/Desktop"/*
     }
 
