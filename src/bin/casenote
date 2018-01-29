@@ -23,7 +23,7 @@ showhelp() {
         Create New Project Note
     "
 
-    declare -A _keywords=(
+    local -A _keywords=(
         [synopsys]="Provide a short list of existing project notes"
         ["case:"]="Select the project to add the note to (defaults to current)"
         [synopsis]="Display list of note excerpts"

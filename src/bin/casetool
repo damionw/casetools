@@ -35,7 +35,7 @@ showhelp() {
         Manage Project Cases
     "
 
-    declare -A _keywords=(
+    local -A _keywords=(
         ["case::"]="Select a project or provide the currently selected project"
         [shell]="Run a console shell in the selected project virtualenv",
         [console]="Run a console shell in the selected project's virtualenv",

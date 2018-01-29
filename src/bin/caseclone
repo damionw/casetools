@@ -13,15 +13,41 @@ logging::set_severity info
 #===================================================================================
 #                              Help Message
 #===================================================================================
-showhelp()
-{
-    contents=$(
-        echo "${*}" |
-        awk -F, '{for (i=1; i <= NF; ++i) {print $i;}}' |
-        awk -F: '{printf("%s[--%s%s]", sep, $1, (NF == 2 ? sprintf("=<%s>", $1) : "")); sep=" "}'
+showhelp() {
+    local _synopsis="
+        Checkout management for project
+    "
+
+    local -A _keywords=(
+        ["case::"]="Select a project or provide the currently selected project"
+        ["url:"]="Url for Git/Mercurial repo to clone from",
+        [help]="Display instructions"
     )
 
-    echo "Usage: $0 ${contents}" >&2
+    local _terms="$(echo "${@}" | awk -F, '{for (i=1; i <= NF; ++i) {print $i;}}')"
+    local _topic
+
+    local _contents="$(
+        echo "${_terms}" | awk -F: '{printf("%s[--%s%s]", sep, $1, (NF == 2 ? sprintf("=<%s>", $1) : "")); sep=" "}'
+        echo -en "${_synopsis:+\n}"
+        echo "${_synopsis}" | sed -e 's/^[ ]*//g' -e '/^[ ]*$/d'
+
+        echo "${_terms}" | {
+            _prefix="\n"
+
+            while read _topic
+            do
+                if [ -n "${_keywords["${_topic}"]}" ]
+                then
+                    _fill="$(for ((i=$(echo -n "${_topic}" | wc -c); i < 15; ++i)); do echo -n " "; done)"
+                    echo -e "${_prefix}--${_topic}${_fill}${_keywords["${_topic}"]}" | sed -e 's/^./    &/g'
+                    _prefix=""
+                fi
+            done
+        }
+    )"
+
+    echo "Usage: $0 ${_contents}" >&2
 }
 
 if cases::running_in_gui
