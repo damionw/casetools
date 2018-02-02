@@ -1,0 +1,120 @@
+#! /usr/bin/env bash
+
+first_name="${BASH_SOURCE[0]}"
+actual_name="$(readlink -f "${first_name}")"
+local_path="$(dirname "${actual_name}")"
+
+. "${lib_path}/cases"
+
+cases::packaging::ascii_to_hex() {
+    xxd -p | tr '\n' ' ' | sed -e 's/ //g'
+}
+
+cases::packaging::hex_to_ascii() {
+    xxd -r -ps
+}
+
+cases::packaging::keyfill() {
+    echo "85af9c3fca52cab58c13e01d1ff1077df9ef723de6f671c9df2df7a67dca30adf3d4dacdc34064806e288de50acd53c0fa9f97b4bed4c1a62cadb16260f84f3b77d86731d87b1c9e72dc0c2a4830e16727c5ea6cf8135abbc17c83ad3e57ecce11c53038f8d97b90150f9979fd509366be6b51755e9cebf04fda760ce06b7482" |
+    cases::packaging::hex_to_ascii
+}
+
+cases::packaging::key() {
+    if [ -n "${1}" -o -z "${__CASETOOL_PACKAGING_KEY__}" ]
+    then
+        local _phrase="${1}"
+        local _length="$(echo -n "${_phrase}" | wc -c)"
+        local _fill="$(cases::packaging::keyfill | dd bs=1 skip=${_length} 2>/dev/null)"
+        local _key="$(echo -n "${_phrase}${_fill}")"
+        local _hex="$(echo -n "${_key}" | cases::packaging::ascii_to_hex)"
+
+        export __CASETOOL_PACKAGING_KEY__="${_hex}"
+    fi
+
+    if [ -z "${1}" ]
+    then
+        echo "${__CASETOOL_PACKAGING_KEY__}"
+    fi
+}
+
+cases::packaging::pack() {
+    local _package_dir
+
+    if ! _package_dir="$(cases::selected)"
+    then
+        logging::error "No project selected for packing"
+        return 255
+    fi
+
+    if ! cd "$(dirname "${_package_dir}")"
+    then
+        logging::error "Cannot access project folder '${_package_dir}'"
+        return 255
+    fi
+
+    tar cfj - "$(basename "${_package_dir}")" |
+    openssl enc -aes-256-cbc -base64 -pass fd:17 17<<< "$(cases::packaging::key)"
+}
+
+cases::packaging::unpack() {
+    local _tempdir
+    local _state=
+
+    if [ -z "${CASETOOLS_BASE}" ]
+    then
+        logging::error "No Cases home domain has been selected"
+        return 255
+    elif ! _tempdir="$(mktemp --directory --quiet)"
+    then
+        logging::error "Cannot create temporary folder"
+        return 255
+    fi
+
+    logging::info "Created temporary folder '${_tempdir}'"
+
+    if cd "${_tempdir}"
+    then
+        logging::info "Restoring into '${_tempdir}'"
+
+        if openssl enc -aes-256-cbc -base64 -d -pass fd:17 17<<< "$(cases::packaging::key)" | tar xfj -
+        then
+            local _project_name="$(ls -1 | head -1)"
+            local _target_folder="${CASETOOLS_BASE}/${_project_name}"
+
+            if [ -d "${_target_folder}" ]
+            then
+                local _rename_to="${_target_folder}.$(date '+%Y-%m-%d:%H:%M')"
+
+                if [ -e "${_rename_to}" ]
+                then
+                    _state=$?
+                    logging::error "Cannot overwrite preserved folder '${_rename_to}'"
+                elif ! mv "${_target_folder}" "${_rename_to}"
+                then
+                    _state=$?
+                    logging::error "Failed renaming folder '${_target_folder}' to '${_rename_to}'"
+                fi
+            fi
+
+            if [ -n "${_state}" ]
+            then
+                :
+            elif ! mv "${_project_name}" "${_target_folder}"
+            then
+                _state=$?
+                logging::error "Could not relocate restored folder '${_project_name}' into '${_target_folder}'"
+            else
+                _state=$?
+                logging::info "Successfully restore project '${_project_name}'"
+            fi
+        else
+            _state=$?
+            logging::error "Cannot descrypt/restore archive into '${_tempdir}'"
+        fi
+    fi
+
+    # Cleanup
+    rm -rf "${_tempdir}"
+
+    return ${_state:-0}
+}

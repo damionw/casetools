@@ -50,6 +50,8 @@ showhelp() {
         [exec:]="Run a shell command in the selected project's virtualenv",
         [where]="Display the project's home directory",
         [home]="Display the base directory where the projects are contained",
+        [pack:]="Archive the current project to a file",
+        [unpack:]="Restore an archived project from a file",
         [help]="Display instructions"
     )
 
@@ -84,7 +86,7 @@ showhelp() {
 #       will cause the first non option parameter to be discarded. Here, we just
 #       use -h (help)
 #===================================================================================
-long_options="help,version,debug,error,info,warning,fatal,lib,case::,shell,console,description::,module::,modules::,list,update,requirements,date,browse,exec:,where,home"
+long_options="help,version,debug,error,info,warning,fatal,lib,case::,shell,console,description::,module::,modules::,list,update,requirements,date,browse,exec:,where,home,pack:,unpack:"
 
 OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
 
@@ -267,6 +269,37 @@ do
             echo "${library_import_file}"
             shift
             exit 0
+            ;;
+
+        --pack)
+            if _archive_file="${2:?Please provide an archive file to create}" && read -p "Enter passphrase: " -s _passphrase
+            then
+                echo
+            else
+                exit 255
+            fi
+
+            shift 2
+
+            if cases::packaging::key "${_passphrase}" && cases::packaging::pack > "${_archive_file}"
+            then
+                logging::info "Wrote archive of '$(cases::case)' to '${_archive_file}'"
+            fi
+            exit $?
+            ;;
+
+        --unpack)
+            if _archive_file="${2:?Please provide an archive file to restore}" && read -p "Enter passphrase: " -s _passphrase
+            then
+                echo
+            else
+                exit 255
+            fi
+
+            shift 2
+
+            cases::packaging::key "${_passphrase}" && cases::packaging::unpack < "${_archive_file}"
+            exit $?
             ;;
 
         --version)

@@ -19,8 +19,11 @@ lib_path="${local_path}/${package_name}-${CASETOOLS_VERSION}"
 . "${lib_path}/cases"
 . "${lib_path}/paths"
 . "${lib_path}/cloning"
+. "${lib_path}/packaging"
 . "$(bashlib --lib)"
 
 casetools::version() {
     echo "${CASETOOLS_VERSION}"
 }
+
+hash -r
