@@ -105,7 +105,7 @@ cases::packaging::unpack() {
                 logging::error "Could not relocate restored folder '${_project_name}' into '${_target_folder}'"
             else
                 _state=$?
-                logging::info "Successfully restore project '${_project_name}'"
+                logging::info "Successfully restored project '${_project_name}' into hive '${CASETOOLS_BASE}'"
             fi
         else
             _state=$?
