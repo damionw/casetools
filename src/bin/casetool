@@ -126,6 +126,10 @@ do
             then
                 echo ${CASETOOLS_BASE}
                 exit 0
+            elif [ ! -d "${2}" ]
+            then
+                logging::error "Project group folder '${2}' doesn't exist"
+                exit 255
             else
                 export CASETOOLS_BASE="${2}"
             fi
