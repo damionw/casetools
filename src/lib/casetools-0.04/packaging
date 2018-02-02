@@ -53,7 +53,8 @@ cases::packaging::pack() {
     fi
 
     tar cfj - "$(basename "${_package_dir}")" |
-    openssl enc -aes-256-cbc -base64 -pass fd:17 17<<< "$(cases::packaging::key)"
+    openssl enc -aes-256-cbc -base64 -pass fd:17 17<<< "$(cases::packaging::key)" |
+    gzip -c
 }
 
 cases::packaging::unpack() {
@@ -76,7 +77,7 @@ cases::packaging::unpack() {
     then
         logging::info "Restoring into '${_tempdir}'"
 
-        if openssl enc -aes-256-cbc -base64 -d -pass fd:17 17<<< "$(cases::packaging::key)" | tar xfj -
+        if gzip -dc | openssl enc -aes-256-cbc -base64 -d -pass fd:17 17<<< "$(cases::packaging::key)" | tar xfj -
         then
             local _project_name="$(ls -1 | head -1)"
             local _target_folder="${CASETOOLS_BASE}/${_project_name}"
