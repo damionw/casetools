@@ -49,7 +49,7 @@ showhelp() {
         [browse]="Open a file browser in the project's home directory",
         [exec:]="Run a shell command in the selected project's virtualenv",
         [where]="Display the project's home directory",
-        [home]="Display the base directory where the projects are contained",
+        [home::]="Display or set the base directory where the projects are contained",
         [pack:]="Archive the current project to a file",
         [unpack:]="Restore an archived project from a file",
         [help]="Display instructions"
@@ -86,7 +86,7 @@ showhelp() {
 #       will cause the first non option parameter to be discarded. Here, we just
 #       use -h (help)
 #===================================================================================
-long_options="help,version,debug,error,info,warning,fatal,lib,case::,shell,console,description::,module::,modules::,list,update,requirements,date,browse,exec:,where,home,pack:,unpack:"
+long_options="help,version,debug,error,info,warning,fatal,lib,case::,shell,console,description::,module::,modules::,list,update,requirements,date,browse,exec:,where,home::,pack:,unpack:"
 
 OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
 
@@ -122,9 +122,15 @@ do
             ;;
 
         --home)
-            echo ${CASETOOLS_BASE}
-            shift
-            exit 0
+            if [ -z "${2}" ]
+            then
+                echo ${CASETOOLS_BASE}
+                exit 0
+            else
+                export CASETOOLS_BASE="${2}"
+            fi
+
+            shift 2
             ;;
 
         --list)
