@@ -170,7 +170,7 @@ cases::create() {
 
         {
             echo "[Desktop Entry]"
-            echo "Icon=/usr/share/icons/"
+            echo "Icon=desktop"
         } > "${_path}/Desktop/.directory"
 
         format_desktop_item "${_name}" "casetool --case='${_name}' --browse" > "${_path}/Desktop/Browse"
