@@ -165,7 +165,7 @@ cases::create() {
 
         {
             echo "[Desktop Entry]"
-            echo "Icon=/usr/share/icons/hicolor/48x48/ksplash.png"
+            echo "Icon=/usr/share/icons/hicolor/48x48/apps/ksplash.png"
         } > "${_path}/.directory"
 
         {
