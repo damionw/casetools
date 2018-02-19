@@ -51,6 +51,7 @@ showhelp() {
         [where]="Display the project's home directory",
         [home::]="Display or set the base directory where the projects are contained",
         [pack:]="Archive the current project to a file",
+        [exclude:]="Add folder to exclude from archiving",
         [unpack:]="Restore an archived project from a file",
         [help]="Display instructions"
     )
@@ -86,7 +87,7 @@ showhelp() {
 #       will cause the first non option parameter to be discarded. Here, we just
 #       use -h (help)
 #===================================================================================
-long_options="help,version,debug,error,info,warning,fatal,lib,case::,shell,console,description::,module::,modules::,list,update,requirements,date,browse,exec:,where,home::,pack:,unpack:"
+long_options="help,version,debug,error,info,warning,fatal,lib,case::,shell,console,description::,module::,modules::,list,update,requirements,date,browse,exec:,where,exclude:,home::,pack:,unpack:"
 
 OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
 
@@ -103,6 +104,8 @@ eval set -- "$OPTION_TEMP"
 # NOTE: The command line parameters are available for scripts which
 #       source this file.
 #===================================================================================
+excluded_folders=()
+
 if [ -d "${CASETOOLS_BASE}" ]
 then
     :
@@ -165,6 +168,11 @@ do
 
         --description)
             cases::description "${2}"
+            shift 2
+            ;;
+
+        --exclude)
+            excluded_folders[${#excluded_folders[@]}]="${2}"
             shift 2
             ;;
 
@@ -291,7 +299,7 @@ do
 
             shift 2
 
-            if cases::packaging::key "${_passphrase}" && cases::packaging::pack > "${_archive_file}"
+            if cases::packaging::key "${_passphrase}" && cases::packaging::pack "${excluded_folders[@]}" > "${_archive_file}"
             then
                 logging::info "Wrote archive of '$(cases::case)' to '${_archive_file}'"
             fi

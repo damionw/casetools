@@ -38,6 +38,7 @@ cases::packaging::key() {
 }
 
 cases::packaging::pack() {
+    local _exclude
     local _package_dir
 
     if ! _package_dir="$(cases::selected)"
@@ -52,7 +53,7 @@ cases::packaging::pack() {
         return 255
     fi
 
-    tar cfj - "$(basename "${_package_dir}")" |
+    tar cfj - "$(basename "${_package_dir}")" $(for _exclude in "$@"; do echo --exclude="${_exclude}"; done) |
     openssl enc -aes-256-cbc -base64 -pass fd:17 17<<< "$(cases::packaging::key)" |
     gzip -c
 }
