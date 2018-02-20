@@ -216,7 +216,7 @@ do
 
                 if ${_just_created}
                 then
-                    cases::module "https://github.com/damionw/webserve.git" &&
+                    # cases::module "https://github.com/damionw/webserve.git" &&
                     cases::description "${_name}" ||
                     logging::fatal "Cannot install required modules"
                 fi
