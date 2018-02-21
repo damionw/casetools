@@ -176,7 +176,7 @@ cases::create() {
         date '+%Y-%m-%d' > ${_path}/CREATED
 
         local _desktop="${_path}/Desktop"
-        local _tools="${_path}/Desktop"
+        local _tools="${_path}/Tools"
 
         #------------------------------------
         # Configure freedesktop files
@@ -215,12 +215,12 @@ cases::create() {
         format_desktop_item "${_name}" "konsole -p colors=Casetool -e casetool --case='${_name}' --console" > "${_desktop}/Console"
         format_desktop_item "${_name}" "caseclone --case='${_name}' --url='%U'" > "${_desktop}/Clone"
         format_desktop_item "${_name}" "casenote --case='${_name}'" > "${_desktop}/Add a Note"
-        make_python_console_script > "${_tools}python_console"
+        make_python_console_script > "${_tools}/python_console"
 
         #------------------------------------
         #              Permissions
         #------------------------------------
-        chmod u+rx "${_desktop}"/* "${_tools}"/*
+        chmod -R u+rx "${_desktop}/." "${_tools}/."
     }
 
     local _path="${1:?Provide a case path}"
