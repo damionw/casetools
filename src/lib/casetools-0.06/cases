@@ -211,11 +211,15 @@ cases::create() {
             echo "Icon=desktop"
         } > "${_desktop}/.directory"
 
-        format_desktop_item "${_name}" "casetool --case='${_name}' --browse" > "${_desktop}/Browse"
-        format_desktop_item "${_name}" "konsole -p colors=Casetool -e casetool --case='${_name}' --console" > "${_desktop}/Console"
-        format_desktop_item "${_name}" "caseclone --case='${_name}' --url='%U'" > "${_desktop}/Clone"
-        format_desktop_item "${_name}" "casenote --case='${_name}'" > "${_desktop}/Add a Note"
-        make_python_console_script > "${_tools}/python_console"
+        format_desktop_item "${_name}" "casetool --case='${_name}' --browse" >"${_desktop}/Browse"
+        format_desktop_item "${_name}" "konsole -p colors=Casetool -e casetool --case='${_name}' --console" >"${_desktop}/Console"
+        format_desktop_item "${_name}" "caseclone --case='${_name}' --url='%U'" >"${_desktop}/Clone"
+        format_desktop_item "${_name}" "casenote --case='${_name}'" >"${_desktop}/Add a Note"
+
+        if make_python_console_script > "${_tools}/python_console"
+        then
+            format_desktop_item "${_name}" "konsole -p colors=Casetool --noclose -e casetool --case='${_name}' --exec=python_console" > "${_desktop}/Python Console"
+        fi
 
         #------------------------------------
         #              Permissions
