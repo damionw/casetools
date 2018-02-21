@@ -100,7 +100,7 @@ cases::create() {
         local _command="${2:?Provide a command}"
         local _icon="${3:-/usr/share/icons/hicolor/32x32/apps/kde-windows.png}"
 
-        sed -e 's/^                //g' <<'        EOF' | m4 -DLABEL="${_label}" -DCOMMAND_LINE="${_command}" -DICON="${_icon}"
+        sed -e 's/^            //g' <<'        EOF' | m4 -DLABEL="${_label}" -DCOMMAND_LINE="${_command}" -DICON="${_icon}"
             [Desktop Entry]
             Comment[en_US]=LABEL
             Comment=LABEL
@@ -124,6 +124,41 @@ cases::create() {
         EOF
     }
 
+    make_python_console_script() {
+        sed -e 's/^            //g' <<'        EOF'
+            #! /usr/bin/env bash
+
+            . "$(bashlib --lib)"
+
+            get_python_script() {
+                prepare_script() {
+                    local _indent="$(echo | awk '{for (i=count; i > 0; --i){printf(" ");}}' count=${1:-0})"
+
+                    m4  --prefix-builtins |
+                    sed -e 's/^'"${_indent}"'//g'
+                }
+
+                prepare_script 8 <<'    EOF'  
+                    import logging
+
+                    from traceback import format_exc
+
+                    logging.basicConfig(level=logging.INFO)
+
+                    LOG = logging.getLogger(__name__)
+
+                    #--------------------------------- CUT HERE -------------------------------------
+                    #--------------------------------- CUT HERE -------------------------------------
+
+                    __import__("code").interact(local=dict(globals().items() + locals().items()))
+                    LOG.info("Finished")
+                EOF
+            }
+
+            exec python <(get_python_script) "$@"
+        EOF
+    }
+
     create_skeleton_folder() {
         local _path="${1:?Provide a path}"
         local _name="${2:-$(basename "${_path}")}"
@@ -139,6 +174,9 @@ cases::create() {
 
         echo "No description for this case yet" > "${_path}/README"
         date '+%Y-%m-%d' > ${_path}/CREATED
+
+        local _desktop="${_path}/Desktop"
+        local _tools="${_path}/Desktop"
 
         #------------------------------------
         # Configure freedesktop files
@@ -171,17 +209,18 @@ cases::create() {
         {
             echo "[Desktop Entry]"
             echo "Icon=desktop"
-        } > "${_path}/Desktop/.directory"
+        } > "${_desktop}/.directory"
 
-        format_desktop_item "${_name}" "casetool --case='${_name}' --browse" > "${_path}/Desktop/Browse"
-        format_desktop_item "${_name}" "konsole -p colors=Casetool -e casetool --case='${_name}' --console" > "${_path}/Desktop/Console"
-        format_desktop_item "${_name}" "caseclone --case='${_name}' --url='%U'" > "${_path}/Desktop/Clone"
-        format_desktop_item "${_name}" "casenote --case='${_name}'" > "${_path}/Desktop/Add a Note"
+        format_desktop_item "${_name}" "casetool --case='${_name}' --browse" > "${_desktop}/Browse"
+        format_desktop_item "${_name}" "konsole -p colors=Casetool -e casetool --case='${_name}' --console" > "${_desktop}/Console"
+        format_desktop_item "${_name}" "caseclone --case='${_name}' --url='%U'" > "${_desktop}/Clone"
+        format_desktop_item "${_name}" "casenote --case='${_name}'" > "${_desktop}/Add a Note"
+        make_python_console_script > "${_tools}python_console"
 
         #------------------------------------
         #              Permissions
         #------------------------------------
-        chmod u+rx "${_path}/Desktop"/*
+        chmod u+rx "${_desktop}"/* "${_tools}"/*
     }
 
     local _path="${1:?Provide a case path}"
