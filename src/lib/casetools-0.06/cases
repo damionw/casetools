@@ -100,7 +100,7 @@ cases::create() {
         local _command="${2:?Provide a command}"
         local _icon="${3:-/usr/share/icons/hicolor/32x32/apps/kde-windows.png}"
 
-        sed -e 's/^            //g' <<'        EOF' | m4 -DLABEL="${_label}" -DCOMMAND_LINE="${_command}" -DICON="${_icon}"
+        sed -e 's/^            //g' <<'        EOF' | m4 --prefix-builtins -DLABEL="${_label}" -DCOMMAND_LINE="${_command}" -DICON="${_icon}"
             [Desktop Entry]
             Comment[en_US]=LABEL
             Comment=LABEL
