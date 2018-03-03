@@ -8,7 +8,7 @@ cases::module() {
     local _folder="$(cases::selected)"
     local _url="${1}"
 
-    if ! (modules::install "${_url}" "${CASETOOLS_CASE}" || modules::install::git "${_url}")
+    if ! (modules::install::install "${_url}" "${CASETOOLS_CASE}" || modules::install::install "${_url}")
     then
         logging::error "Cannot install required module '${_url}'"
         return 255
