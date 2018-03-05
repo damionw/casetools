@@ -214,6 +214,7 @@ cases::create() {
         format_desktop_item "${_name}" "konsole -p colors=Casetool -e casetool --case='${_name}' --console" >"${_desktop}/Console"
         format_desktop_item "${_name}" "caseclone --case='${_name}' --url='%U'" >"${_desktop}/Clone"
         format_desktop_item "${_name}" "casenote --case='${_name}'" >"${_desktop}/Add a Note"
+        format_desktop_item "${_name}" "casetool --case='${_name}' --exec 'touch -a CLOSED'" >"${_desktop}/Close Issue"
 
         if make_python_console_script > "${_tools}/python_console"
         then
