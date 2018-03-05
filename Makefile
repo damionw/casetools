@@ -14,6 +14,11 @@ help:
 
 build: build/lib/$(PACKAGE_NAME) $(BIN_COMPONENTS)
 
+install-private: tests $(HOME)/bin
+	@echo "Privately installing into directory '$(HOME)'"
+	@echo $$PATH | tr '\\:' '\n' | grep -q '^'"$$HOME/bin"'$$'
+	@rsync -az build/ $(HOME)/
+
 install: tests
 	@echo "Installing into directory '$(INSTALL_PATH)'"
 	@rsync -az build/ $(INSTALL_PATH)/
