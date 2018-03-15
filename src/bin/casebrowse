@@ -108,11 +108,18 @@ do
     esac
 done
 
-cases_folder="${cases_folder:+--home=\"${cases_folder}\"}"
+parameters=()
 
-if selection=$(eval kdialog --combobox fred $(casetool ${cases_folder} --list | sort | sed -e 's/\"/\\"/g' -e 's/^/"/g' -e 's/$/"/g'))
+if [ -n "${cases_folder}" ]
 then
-    eval exec casetool "${cases_folder}" --case="\"${selection}\"" --browse
+    parameters=( "--home=${cases_folder}" )
+fi
+
+eval selections=( $(casetool "${parameters[@]}" --list | sort | sed -e 's/\"/\\"/g' -e 's/^/"/g' -e 's/$/"/g'))
+
+if selection=$(kdialog --combobox Projects "${parameters[@]}" "${selections[@]}")
+then
+    exec casetool "${parameters[@]}" --case="${selection}" --browse
 fi
 
 exit 255
