@@ -188,14 +188,21 @@ cases::create() {
 
             sed -e 's/^                //g' <<< '
                 cd() {
-                    if [ -z "$1" ]
-                    then
-                        where="${CASETOOLS_HOME:-${HOME}}"
-                    else
-                        where="$1"
-                    fi
+                    local _where
 
-                    command cd "${where}"
+                    if [ -n "$1" ]
+                    then
+                        command cd "${1}"
+                    elif _where="$(casetool --where)"
+                    then
+                        command cd "${_where}"
+                    else
+                        command cd "${HOME}"
+                    fi
+                }
+
+                tools() {
+                    ls -1 "$(casetool --where)/Tools"
                 }
             '
         } >> "${_path}/.profile"
