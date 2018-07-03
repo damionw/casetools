@@ -255,7 +255,7 @@ do
 
                 (
                     cd "${_folder}" &&
-                    ENV="${_folder}/.profile" exec bash --noprofile -c ". .profile; ${_command}" && _status=$?
+                    ENV="${_folder}/.profile" exec bash --noprofile -c ". .profile; exec ${_command}" && _status=$?
                 )
                 _status=$?
 
