@@ -47,9 +47,9 @@ cases::clone() {
 
         if (echo "${_url}" | grep -q 'github[\.]com') # Special case for github
         then
-            _checkout_name="$(basename "${_url}")"
-            _url="${_url}.git"
-            _branch="master"
+            _checkout_name="${_reponame}-$(basename "${_url}")"
+            _url="https://${_servername}/${_username}/${_reponame}.git"
+            # _branch="master"
         elif (echo "${_branch}" | grep -q '[\.]git$')
         then
             _checkout_name="$(basename "${_url}" | sed -e 's/[\.]git$//g')"
@@ -73,7 +73,7 @@ cases::clone() {
     elif "${_use_git}"
     then
         logging::info "Using url '${_url}' and branch '${_branch}'"
-        local _msg="$(LD_LIBRARY_PATH= git clone -b "${_branch}" "${_url}" "$_checkout_folder" 2>&1)" || logging::fatal "${_msg}"
+        local _msg="$(LD_LIBRARY_PATH= git clone -b "${_branch}" "${_url}" "${_checkout_folder}" 2>&1)" || logging::fatal "${_msg}"
         local _upstream="$(echo "${_url}" | sed -e 's/[\:]'"${USER}"'[\/]/:risk\//g')"
         (cd "${_checkout_folder}" && LD_LIBRARY_PATH= git remote add upstream "${_upstream}")
     else
