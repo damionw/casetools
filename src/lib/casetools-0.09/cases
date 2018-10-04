@@ -204,6 +204,12 @@ cases::create() {
                 tools() {
                     ls -1 "$(casetool --where)/Tools"
                 }
+
+                if [ $(bc <<< "$((pip --version 2>/dev/null | awk '{print $2;}' || echo 0.0) | sed -e 's/\([0-9]*[\.][0-9]*\)[\.][0-9]*/\1/g') < 9.0") = 1 ]
+                then
+                    logging::info "Upgrading/Installing pip for virtual environment"
+                    easy_install pip
+                fi
             '
         } >> "${_path}/.profile"
 
