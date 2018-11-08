@@ -75,6 +75,7 @@ cases::clone() {
         logging::info "Using url '${_url}' and branch '${_branch}'"
         local _msg="$(LD_LIBRARY_PATH= git clone -b "${_branch}" "${_url}" "${_checkout_folder}" 2>&1)" || logging::fatal "${_msg}"
         local _upstream="$(echo "${_url}" | sed -e 's/[\:]'"${USER}"'[\/]/:risk\//g')"
+        (cd "${_checkout_folder}" && test -f .gitmodules && git submodule init && git submodule update)
         (cd "${_checkout_folder}" && LD_LIBRARY_PATH= git remote add upstream "${_upstream}")
     else
         msg="$(hg clone --uncompressed "${_url}" "${_checkout_folder}" 2>&1)" || logging::fatal "$msg"
