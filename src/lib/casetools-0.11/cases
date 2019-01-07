@@ -203,6 +203,14 @@ cases::create() {
             '
 
             sed -e 's/^                //g' <<< '
+                pip() {
+                    "$(which pip)" --find-links "$(casetool --where)/Packages" "$@"
+                }
+
+                export -f pip
+            '
+
+            sed -e 's/^                //g' <<< '
                 tools() {
                     ls -1 "$(casetool --where)/Tools"
                 }
