@@ -42,7 +42,7 @@ showhelp() {
         [description::]="Provide or display the project's description",
         [module::]="Provide a git package dependency or list the project's existing dependencies",
         [modules::]="Provide a git package dependency or list the project's existing dependencies",
-        [list]="List the known project names",
+        ["list::"]="List the known project names (open|closed)",
         [update]="Refresh all of the project dependencies",
         [requirements]="List the project's existing dependencies",
         [date]="Provide the project's creation date",
@@ -87,7 +87,7 @@ showhelp() {
 #       will cause the first non option parameter to be discarded. Here, we just
 #       use -h (help)
 #===================================================================================
-long_options="help,version,debug,error,info,warning,fatal,lib,case::,shell,console,description::,module::,modules::,list,update,requirements,date,browse,exec:,where,exclude:,home::,pack:,unpack:"
+long_options="help,version,debug,error,info,warning,fatal,lib,case::,shell,console,description::,module::,modules::,list::,update,requirements,date,browse,exec:,where,exclude:,home::,pack:,unpack:"
 
 OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
 
@@ -141,8 +141,8 @@ do
             ;;
 
         --list)
-            cases::list
-            shift
+            cases::list "${2:-all}"
+            shift 2
             ;;
 
         --module|--modules)

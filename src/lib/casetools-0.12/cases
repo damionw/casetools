@@ -20,18 +20,27 @@ cases::module() {
 
 cases::list() {
     local _folder="${CASETOOLS_BASE}"
+    local _mode="${1:-all}"
     local _case
 
     if [ ! -d "${_folder}" ]
     then
         logging::fatal "No Cases home domain has been selected"
     else
-        find "${_folder}" -mindepth 1 -maxdepth 1 -type d -printf "%f\n" |
-        while read _case
+        find "${_folder}" -mindepth 1 -maxdepth 1 -type d -printf "%f\n" | while read _case
         do
+            local _closed=$(test -e "${_folder}/${_case}/CLOSED" && echo true || echo false)
+
+            if [ "${_mode}" = "open" ] && ${_closed}
+            then
+                continue
+            elif [ "${_mode}" = "closed" ] && ! ${_closed}
+            then
+                continue
+            fi
+
             echo "${_case}" | url::decode
-        done |
-        sort
+        done | sort
     fi
 }
 
