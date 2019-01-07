@@ -204,7 +204,12 @@ cases::create() {
 
             sed -e 's/^                //g' <<< '
                 pip() {
-                    "$(which pip)" --find-links "$(casetool --where)/Packages" "$@"
+                    if [ "$1" = "install" ]
+                    then
+                        "$(which pip)" "$@" --find-links "$(casetool --where)/Packages"
+                    else
+                        "$(which pip)" "$@"
+                    fi
                 }
 
                 export -f pip
