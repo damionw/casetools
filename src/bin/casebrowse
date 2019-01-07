@@ -20,11 +20,12 @@ logging::set_severity info
 #===================================================================================
 showhelp() {
     local _synopsis="
-        Create New Project Note
+        Browse/select from list of projects
     "
 
     local -A _keywords=(
         ["home:"]="Select the projects folder (defaults to /home/$USER/Projects)"
+        [open]="Only show open projects"
         [help]="Display instructions"
     )
 
@@ -64,7 +65,7 @@ logging::fatal() {
 #       will cause the first non option parameter to be discarded. Here, we just
 #       use -h (help)
 #===================================================================================
-long_options="help,version,debug,error,info,warning,fatal,home:"
+long_options="help,version,debug,error,info,warning,fatal,home:,open"
 
 OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
 
@@ -82,12 +83,18 @@ eval set -- "$OPTION_TEMP"
 #       source this file.
 #===================================================================================
 cases_folder=
+only_open_cases=false
 
 while true
 do
     case "$1" in
         --debug|--info|--warning|--fatal|--error)
             logging::set_severity "$(echo "${1}" | sed -e 's/^[\-]*//g')"
+            shift
+            ;;
+
+        --open)
+            only_open_cases=true
             shift
             ;;
 
@@ -108,6 +115,18 @@ do
     esac
 done
 
+get_selections() {
+    local _case
+
+    casetool "${parameters[@]}" --list | while read _case
+    do
+        if ! (test -f "$(casetool --case="${_case}" --where)/CLOSED" && $only_open_cases)
+        then
+            echo "${_case}"
+        fi
+    done | sort
+}
+
 parameters=()
 
 if [ -n "${cases_folder}" ]
@@ -115,7 +134,7 @@ then
     parameters=( "--home=${cases_folder}" )
 fi
 
-eval selections=( $(casetool "${parameters[@]}" --list | sort | sed -e 's/\"/\\"/g' -e 's/^/"/g' -e 's/$/"/g'))
+eval selections=( $(get_selections | sed -e 's/\"/\\"/g' -e 's/^/"/g' -e 's/$/"/g'))
 
 if selection=$(kdialog --combobox Projects "${parameters[@]}" "${selections[@]}")
 then
