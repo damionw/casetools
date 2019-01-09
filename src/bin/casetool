@@ -37,6 +37,7 @@ showhelp() {
 
     local -A _keywords=(
         ["case::"]="Select a project or provide the currently selected project"
+        ["detect:"]="Determine existence of a project"
         [shell]="Run a console shell in the selected project virtualenv",
         [console]="Run a console shell in the selected project's virtualenv",
         [description::]="Provide or display the project's description",
@@ -87,7 +88,7 @@ showhelp() {
 #       will cause the first non option parameter to be discarded. Here, we just
 #       use -h (help)
 #===================================================================================
-long_options="help,version,debug,error,info,warning,fatal,lib,case::,shell,console,description::,module::,modules::,list::,update,requirements,date,browse,exec:,where,exclude:,home::,pack:,unpack:"
+long_options="help,version,debug,error,info,warning,fatal,lib,case::,shell,console,description::,module::,modules::,list::,update,requirements,date,browse,exec:,where,exclude:,home::,pack:,unpack:,detect:"
 
 OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
 
@@ -122,6 +123,22 @@ do
         --debug|--info|--warning|--fatal|--error)
             logging::set_severity "$(echo "${1}" | sed -e 's/^[\-]*//g')"
             shift
+            ;;
+
+        --detect)
+            _name="${2}"
+            shift 2
+            _case="$(echo "${_name}" | url::encode)"
+            _case_folder="${CASETOOLS_BASE}/${_case}"
+
+            if [ -n "${_name}" -a -d "${_case_folder}" -a -d "${_case_folder}/Environment" ]
+            then
+                logging::debug "Case ${_name} exists"
+                exit 0
+            fi
+
+            logging::warning "Case ${_name} doesn't exist"
+            exit 255
             ;;
 
         --home)
