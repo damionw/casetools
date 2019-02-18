@@ -231,7 +231,7 @@ cases::create() {
             '
             
             m4 --prefix-builtins <<"            EOF" | sed -e 's/^                //g'
-                if [ $(bc <<< "$((i(pip --version 2>/dev/nulli || echo 0 0) | awk '{print $2;}' || echo 0.0) | sed -e 's/\([0-9]*[\.][0-9]*\)[\.][0-9]*/\1/g') < 9.0") = 1 ]
+                if [ $(bc <<< "$(((pip --version 2>/dev/nulli || echo 0 0) | awk '{print $2;}' || echo 0.0) | sed -e 's/\([0-9]*[\.][0-9]*\)[\.][0-9]*/\1/g') < 9.0") = 1 ]
                 then
                     logging::info "Upgrading/Installing pip for virtual environment"
                     easy_install pip
