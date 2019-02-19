@@ -241,7 +241,10 @@ cases::create() {
                 then
                     logging::info "Upgrading/Installing pip for virtual environment"
                     easy_install pip==9.0.1
-                    pip install pip==9.0.1 wheel setuptools --upgrade
+                    pip install pip==9.0.1 
+                    pip install setuptools --upgrade
+                    pip install setuptools --upgrade
+                    pip install wheel
                 fi
             EOF
         } >> "${_path}/.profile"
