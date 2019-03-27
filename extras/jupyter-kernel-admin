@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+
+__version__=0.1
+
+#===================================================================================
+#                          Import libraries
+#===================================================================================
+. "$(casetool --lib)"
+
+#===================================================================================
+#                              Logging Options
+#===================================================================================
+logging::set_severity info
+
+#===================================================================================
+#
+#===================================================================================
+add_kernel() {
+    local _project="${1:?Need case name}"
+    local _where
+
+    if ! _where="$(casetool --case="${_project}" --where)"
+    then
+        logging::error "No such project '${_project}'"
+        return 255
+    elif ! . "${_where}/Environment/bin/activate"
+    then
+        logging::error "Can't select environment from project '${_project}'"
+        return 255
+    else
+        logging::info "Selected environment in '${_where}'"
+    fi
+
+    local _label="$(basename "${_where}" | sed -e 's/[\%][0-9][0-9]/_/g' | tr "[A-Z]" "[a-z]")"
+    local _status=0
+
+    easy_install pip==9.0.1 &&
+    pip install setuptools &&
+    pip install ipykernel==4.0.1 &&
+    python -m ipykernel install --user --name "${_label}" --display-name "${_project}" || {
+        logging::error "Failed installing kernel '${_kernel}'"
+        _status=255
+    }
+
+    deactivate
+
+    return ${_status}
+}
+
+#===================================================================================
+#                              Help Message
+#===================================================================================
+showhelp() {
+    local _synopsis="
+        Manage Projects as Jupyterlab kernels
+    "
+
+    local -A _keywords=(
+        [debug]="Expose debug level logging"
+        [info]="Expose normal level logging"
+        [warning]="Expose error level logging"
+        [error]="Expose error level logging"
+        [fatal]="Expose fatal error level logging"
+        [add:]="Provide a project to add as a kernel"
+        [version]="Produce the command's version string"
+        [list]="List candidate projects"
+        [help]="Display instructions"
+    )
+
+    local _terms="$(echo "${@}" | awk -F, '{for (i=1; i <= NF; ++i) {print $i;}}' | sed -e 's/[\:]*$//g')"
+    local _topic
+
+    local _contents="$(
+        echo "${_terms}" | awk -F: '{printf("%s[--%s%s]", sep, $1, (NF == 2 ? sprintf("=<%s>", $1) : "")); sep=" "}'
+        echo -en "${_synopsis:+\n\n}"
+        echo "${_synopsis}" | sed -e 's/^[ ]*//g' -e '/^[ ]*$/d'
+
+        echo "${_terms}" | {
+            _prefix="\n"
+
+            while read _topic
+            do
+                if [ -n "${_keywords["${_topic}"]}" ]
+                then
+                    _fill="$(for ((i=$(echo -n "${_topic}" | wc -c); i < 15; ++i)); do echo -n " "; done)"
+                    echo -e "${_prefix}--${_topic}${_fill}${_keywords["${_topic}"]}" | sed -e 's/^./    &/g'
+                    _prefix=""
+                fi
+            done
+        }
+    )"
+
+    echo -e "Usage: $0 ${_contents}\n" >&2
+}
+
+#===================================================================================
+# NOTE: There is a bug in getopts where not specifying at least one short option
+#       will cause the first non option parameter to be discarded. Here, we just
+#       use -h (help)
+#===================================================================================
+long_options="help,version,debug,info,warning,error,fatal,env,add:,list"
+
+OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
+
+if [ $? != 0 ]
+then
+    logging::fatal "Invalid command line options ${OPTION_TEMP}"
+fi
+
+eval set -- "$OPTION_TEMP"
+
+#===================================================================================
+#                       Process command line parameters
+#
+# NOTE: The command line parameters are available for scripts which
+#       source this file.
+#===================================================================================
+while true
+do
+    case "$1" in
+        --debug|--info|--warning|--error|--fatal)
+            logging::set_severity "$(echo "${1}" | sed -e 's/^[\-]*//g')"
+            shift
+            ;;
+
+        --list)
+            exec casetool --list
+            shift
+            exit $?
+            ;;
+
+        --add)
+            if ! add_kernel "${2}"
+            then
+                exit $?
+            fi
+
+            shift 2
+            ;;
+
+        --version)
+            echo ${__version__}
+            shift
+            exit 0
+            ;;
+
+        --)
+            shift
+            break
+            ;;
+
+        *)
+            showhelp "${long_options}" >&2
+            exit 0
+            ;;
+    esac
+done
