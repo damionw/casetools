@@ -21,6 +21,27 @@ fi
 logging::set_severity info
 
 #===================================================================================
+#                                Execute a subcommand if required
+#===================================================================================
+if [ -z "$1" ]
+then
+    :
+elif (echo "$1" | grep -q '^[\-]')
+then
+    :
+else
+    subcommand="$(casetools::command_folder)/${1}"
+    shift
+
+    if [ -x "${subcommand}" ]
+    then
+        exec "${subcommand}" "$@"
+    else
+        logging::fatal "No such command '${subcommand}'"
+    fi
+fi
+
+#===================================================================================
 #                                Defaults
 #===================================================================================
 export CASETOOLS_BASE="${CASETOOLS_BASE:-${HOME}/Projects}"
@@ -55,6 +76,7 @@ showhelp() {
         [exclude:]="Add folder to exclude from archiving",
         [unpack:]="Restore an archived project from a file",
         [help]="Display instructions"
+        [commands]="List available subcommands"
     )
 
     local _terms="$(echo "${@}" | awk -F, '{for (i=1; i <= NF; ++i) {print $i;}}')"
@@ -88,7 +110,7 @@ showhelp() {
 #       will cause the first non option parameter to be discarded. Here, we just
 #       use -h (help)
 #===================================================================================
-long_options="help,version,debug,error,info,warning,fatal,lib,case::,shell,console,description::,module::,modules::,list::,update,requirements,date,browse,exec:,where,exclude:,home::,pack:,unpack:,detect:"
+long_options="help,version,debug,error,info,warning,fatal,lib,case::,shell,console,description::,module::,modules::,list::,update,requirements,date,browse,exec:,where,exclude:,home::,pack:,unpack:,detect:,,commands"
 
 OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
 
@@ -339,6 +361,12 @@ do
 
         --version)
             casetools::version
+            shift
+            exit 0
+            ;;
+
+        --commands)
+            find "$(casetools::command_folder)/" -mindepth 1 -maxdepth 1 -type f -executable -printf "%f\n" | sort
             shift
             exit 0
             ;;

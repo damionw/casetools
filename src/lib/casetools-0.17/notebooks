@@ -1,0 +1,64 @@
+#! /usr/bin/env bash
+
+first_name="${BASH_SOURCE[0]}"
+actual_name="$(readlink -f "${first_name}")"
+local_path="$(dirname "${actual_name}")"
+
+#===================================================================================
+#              Handle installing/removing projects from Jupyterlab
+#===================================================================================
+cases::notebooks::install_project_kernel() {
+    local _project
+    local _where
+    local _installer_filename
+
+    if ! _project="${1:?Need a project name}"
+    then
+        logging::error "No project provided"
+        return 255
+    elif ! _where="$(casetool --case="${_project}" --where)"
+    then
+        logging::error "No such project '${_project}'"
+        return 255
+    elif ! _installer_filename="$(mktemp)"
+    then
+        logging::error "Failed creating temporary scriptfile"
+        return 255
+    fi
+
+    local _label="$(basename "${_where}" | sed -e 's/[\%][0-9][0-9]/_/g' | tr "[A-Z]" "[a-z]")"
+
+    sed -e 's/^        //g' > "${_installer_filename}" <<< "
+        easy_install pip==9.0.1 &&
+        pip install setuptools --ignore-installed &&
+        pip install ipykernel==4.1.1 tornado==4.0 --ignore-installed &&
+        python -m ipykernel install --user --name '${_label}' --display-name '${_project}' || {
+            logging::error 'Failed installing kernel ${_label}'
+            _status=255
+        }
+    "
+
+    chmod 755 "${_installer_filename}"
+    casetool --case="${_project}" --exec="${_installer_filename}"
+    local _status="$?"
+    rm "${_installer_filename}"
+    return ${_status}
+}
+
+cases::notebooks::remove_project_kernel() {
+    local _project
+    local _where
+
+    if ! _project="${1:?Need a project name}"
+    then
+        logging::error "No project provided"
+        return 255
+    elif ! _where="$(casetool --case="${_project}" --where)"
+    then
+        logging::error "No such project '${_project}'"
+        return 255
+    fi
+
+    local _label="$(basename "${_where}" | sed -e 's/[\%][0-9][0-9]/_/g' | tr "[A-Z]" "[a-z]")"
+    rm -rf "${HOME}/.local/share/jupyter/kernels/${_label}"
+}
