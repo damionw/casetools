@@ -8,25 +8,23 @@ local_path="$(dirname "${actual_name}")"
 #              Handle installing/removing projects from Jupyterlab
 #===================================================================================
 cases::notebooks::install_project_kernel() {
-    local _project
-    local _where
     local _installer_filename
+    local _project
+    local _label
 
     if ! _project="${1:?Need a project name}"
     then
         logging::error "No project provided"
         return 255
-    elif ! _where="$(casetool --case="${_project}" --where)"
+    elif ! _label="$(cases::notebooks::get_project_kernel_name "${_project}")"
     then
-        logging::error "No such project '${_project}'"
+        logging::error "Can't get label for '${_project}'"
         return 255
     elif ! _installer_filename="$(mktemp)"
     then
         logging::error "Failed creating temporary scriptfile"
         return 255
     fi
-
-    local _label="$(basename "${_where}" | sed -e 's/[\%][0-9][0-9]/_/g' | tr "[A-Z]" "[a-z]")"
 
     sed -e 's/^        //g' > "${_installer_filename}" <<< "
         easy_install pip==9.0.1 &&
@@ -45,20 +43,57 @@ cases::notebooks::install_project_kernel() {
     return ${_status}
 }
 
-cases::notebooks::remove_project_kernel() {
-    local _project
+cases::notebooks::get_project_kernel_name() {
     local _where
+
+    if ! _where="$(cases::project_to_folder "${1}")"
+    then
+        logging::error "No project provided"
+        return 255
+    fi
+
+    basename "${_where}" |
+    sed -e 's/[\%][0-9][0-9]/_/g' |
+    tr "[A-Z]" "[a-z]"
+}
+
+cases::notebooks::get_kernels_folder() {
+    echo "${HOME}/.local/share/jupyter/kernels"
+}
+
+cases::notebooks::remove_project_kernel() {
+    local _kernels_folder="$(cases::notebooks::get_kernels_folder)"
+    local _project
+    local _label
 
     if ! _project="${1:?Need a project name}"
     then
         logging::error "No project provided"
         return 255
-    elif ! _where="$(casetool --case="${_project}" --where)"
+    elif ! _label="$(cases::notebooks::get_project_kernel_name "${_project}" 2>/dev/null)"
     then
-        logging::error "No such project '${_project}'"
+        logging::error "Can't get label for '${_project}'"
         return 255
+    else
+        rm -rf "${_kernels_folder}/${_label}"
     fi
+}
 
-    local _label="$(basename "${_where}" | sed -e 's/[\%][0-9][0-9]/_/g' | tr "[A-Z]" "[a-z]")"
-    rm -rf "${HOME}/.local/share/jupyter/kernels/${_label}"
+cases::notebooks::get_installed_projects() {
+    local _kernels_folder="$(cases::notebooks::get_kernels_folder)"
+    local _project
+    local _label
+
+    cases::list all | while read _project
+    do
+        if ! _label="$(cases::notebooks::get_project_kernel_name "${_project}")"
+        then
+            :
+        elif [ ! -d "${_kernels_folder}/${_label}" ]
+        then
+            :
+        else
+            echo "${_project} (${_label})"
+        fi
+    done
 }

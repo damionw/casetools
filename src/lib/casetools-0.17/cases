@@ -39,37 +39,81 @@ cases::list() {
                 continue
             fi
 
-            echo "${_case}" | url::decode
+            cases::label_to_name "${_case}"
         done | sort
     fi
 }
 
-cases::case() {
-    local _case="${CASETOOLS_CASE}"
+cases::label_to_name() {
+    echo "${1}" | url::decode
+}
 
+cases::name_to_label() {
+    echo "${1}" | url::encode
+}
+
+cases::current() {
     if [ -z "${CASETOOLS_CASE}" ]
     then
         logging::fatal "No individual case has been selected"
     else
-        echo "${_case}" | url::decode
+        echo "${CASETOOLS_CASE}"
     fi
 }
 
-cases::selected() {
-    local _folder="${CASETOOLS_BASE}/${CASETOOLS_CASE}"
+cases::case() {
+    cases::label_to_name "$(cases::current)"
+}
 
-    if [ -z "${CASETOOLS_BASE}" ]
+cases::project_to_folder() {
+    local _project
+    local _label
+
+    if ! _project="${1:?Need a project name}"
+    then
+        logging::error "No project provided"
+        return 255
+    elif ! _label="$(cases::name_to_label "${_project}")"
+    then
+        logging::error "Can't convert project to label"
+        return 255
+    else
+        cases::label_to_folder "${_label}"
+    fi
+}
+
+cases::label_to_folder() {
+    local _folder
+    local _label
+
+    if ! _label="${1:?Need a project label}"
+    then
+        logging::error "No project label provided"
+        return 255
+    elif [ -z "${CASETOOLS_BASE}" ]
     then
         logging::fatal "No Cases home domain has been selected"
-    elif [ -z "${CASETOOLS_CASE}" ]
+        return 255
+    elif ! _folder="${CASETOOLS_BASE}/${_label}"
     then
-        logging::fatal "No individual case has been selected"
+        logging::error "Can't convert project to label"
+        return 255
     elif [ ! -d "${_folder}" ]
     then
         logging::error "Case folder '${_folder}' is missing"
         return 255
     else
         echo "${_folder}"
+    fi
+}
+
+cases::selected() {
+    if [ -z "${CASETOOLS_CASE}" ]
+    then
+        logging::fatal "No individual case has been selected"
+        return 255
+    else
+        cases::label_to_folder "${CASETOOLS_CASE}"
     fi
 }
 
