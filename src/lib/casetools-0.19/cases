@@ -30,6 +30,7 @@ cases::list() {
         find "${_folder}" -mindepth 1 -maxdepth 1 -type d -printf "%f\n" | while read _case
         do
             local _closed=$(test -e "${_folder}/${_case}/CLOSED" && echo true || echo false)
+            local _name="$(cases::label_to_name "${_case}")"
 
             if [ "${_mode}" = "all" ]
             then
@@ -40,12 +41,14 @@ cases::list() {
             elif [ "${_mode}" = "closed" ]
             then
                 ${_closed} || continue
-            elif ! (casetool --case="${_case}" --tags | grep -iq '^'"${_mode}"'$')
+            elif (casetool --case="${_name}" --tags | grep -iq '^'"${_mode}"'$')
             then
+                :
+            else
                 continue
             fi
 
-            cases::label_to_name "${_case}"
+            echo "${_name}"
         done | sort
     fi
 }
@@ -140,9 +143,11 @@ casetool::fetch_tags() {
     if ! _tag_repo="$(casetool::tag_registry)"
     then
         return $?
+    elif [ ! -f "${_tag_repo}" ]
+    then
+        :
     elif ! cat < "${_tag_repo}" 2>/dev/null
     then
-        logging::error "Cannot access '${_tag_repo}'"
         return $?
     fi
 }
