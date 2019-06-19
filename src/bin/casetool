@@ -66,6 +66,9 @@ showhelp() {
         [where]="Display the project's home directory",
         [home::]="Display or set the base directory where the projects are contained",
         [pack:]="Archive the current project to a file",
+        [tag:]="Add a tag",
+        [untag:]="Remove a tag",
+        [tags]="List tags",
         [exclude:]="Add folder to exclude from archiving",
         [unpack:]="Restore an archived project from a file",
         [help]="Display instructions"
@@ -103,7 +106,13 @@ showhelp() {
 #       will cause the first non option parameter to be discarded. Here, we just
 #       use -h (help)
 #===================================================================================
-long_options="help,version,debug,error,info,warning,fatal,lib,case::,shell,console,description::,module::,modules::,list::,update,requirements,date,browse,exec:,where,exclude:,home::,pack:,unpack:,detect:,,commands"
+long_options=
+long_options="${long_options}${long_options:+,}help,version,lib"
+long_options="${long_options}${long_options:+,}debug,error,info,warning,fatal"
+long_options="${long_options}${long_options:+,}case::,shell,console,description::,module::,modules::"
+long_options="${long_options}${long_options:+,}list::,update,requirements,date,browse,exec:,where"
+long_options="${long_options}${long_options:+,}exclude:,home::,pack:,unpack:,detect:,commands"
+long_options="${long_options}${long_options:+,}tag:,untag:,tags"
 
 OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
 
@@ -360,6 +369,22 @@ do
 
         --commands)
             find "$(casetools::command_folder)/" -mindepth 1 -maxdepth 1 -type f -executable -printf "%f\n" | sort
+            shift
+            exit 0
+            ;;
+
+        --tag)
+            casetool::add_tag "${2}"
+            shift 2
+            ;;
+
+        --untag)
+            casetool::remove_tag "${2}"
+            shift 2
+            ;;
+
+        --tags)
+            casetool::list_tags
             shift
             exit 0
             ;;

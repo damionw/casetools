@@ -31,10 +31,16 @@ cases::list() {
         do
             local _closed=$(test -e "${_folder}/${_case}/CLOSED" && echo true || echo false)
 
-            if [ "${_mode}" = "open" ] && ${_closed}
+            if [ "${_mode}" = "all" ]
             then
-                continue
-            elif [ "${_mode}" = "closed" ] && ! ${_closed}
+                :
+            elif [ "${_mode}" = "open" ]
+            then
+                ${_closed} && continue
+            elif [ "${_mode}" = "closed" ]
+            then
+                ${_closed} || continue
+            elif ! (casetool --case="${_case}" --tags | grep -iq '^'"${_mode}"'$')
             then
                 continue
             fi
@@ -115,6 +121,83 @@ cases::selected() {
     else
         cases::label_to_folder "${CASETOOLS_CASE}"
     fi
+}
+
+casetool::tag_registry() {
+    local _case_folder=
+
+    if ! _case_folder="$(cases::selected)"
+    then
+        return $?
+    fi
+
+    echo "${_case_folder}/TAGS"
+}
+
+casetool::fetch_tags() {
+    local _tag_repo=
+
+    if ! _tag_repo="$(casetool::tag_registry)"
+    then
+        return $?
+    elif ! cat < "${_tag_repo}" 2>/dev/null
+    then
+        logging::error "Cannot access '${_tag_repo}'"
+        return $?
+    fi
+}
+
+casetool::save_tags() {
+    # Tag content received via stdin
+
+    local _tag_repo=
+
+    if ! _tag_repo="$(casetool::tag_registry)"
+    then
+        return $?
+    elif ! (sed -e '/^[ ]*$/d' | sort -u > "${_tag_repo}")
+    then
+        return $?
+    fi
+}
+
+casetool::add_tag() {
+    local _tag=
+
+    local _new_content="$(
+        for _tag in "${@}"
+        do
+            echo ${_tag} | tr 'A-Z' 'a-z'
+        done
+    )"
+
+    if ! (echo "${_new_content}"; casetool::fetch_tags) | casetool::save_tags
+    then
+        return $?
+    fi
+}
+
+casetool::remove_tag() {
+    local _regex=
+
+    for _tag in "${@}"
+    do
+        _regex="${_regex}${_regex:+|}${_tag}"
+    done
+
+    if [ -z "${_regex}" ]
+    then
+        :
+    elif (casetool::fetch_tags | egrep -iv '^'"${_regex}"'$' | casetool::save_tags)
+    then
+        :
+    else
+        logging::error "Can't update tag repo"
+    fi
+}
+
+casetool::list_tags() {
+    casetool::fetch_tags
 }
 
 cases::requirements() {
