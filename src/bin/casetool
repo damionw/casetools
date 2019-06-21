@@ -68,7 +68,7 @@ showhelp() {
         [pack:]="Archive the current project to a file",
         [tag:]="Add a tag",
         [untag:]="Remove a tag",
-        [tags]="List tags",
+        [tags::]="List tags (tags=all fetches tags from all projects)",
         [exclude:]="Add folder to exclude from archiving",
         [unpack:]="Restore an archived project from a file",
         [help]="Display instructions"
@@ -112,7 +112,7 @@ long_options="${long_options}${long_options:+,}debug,error,info,warning,fatal"
 long_options="${long_options}${long_options:+,}case::,shell,console,description::,module::,modules::"
 long_options="${long_options}${long_options:+,}list::,update,requirements,date,browse,exec:,where"
 long_options="${long_options}${long_options:+,}exclude:,home::,pack:,unpack:,detect:,commands"
-long_options="${long_options}${long_options:+,}tag:,untag:,tags"
+long_options="${long_options}${long_options:+,}tag:,untag:,tags::"
 
 OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
 
@@ -384,8 +384,8 @@ do
             ;;
 
         --tags)
-            casetool::list_tags
-            shift
+            casetool::list_tags ${2}
+            shift 2
             exit 0
             ;;
 

@@ -202,7 +202,24 @@ casetool::remove_tag() {
 }
 
 casetool::list_tags() {
-    casetool::fetch_tags
+    local _folder="${CASETOOLS_BASE}"
+    local _mode="${1}"
+
+    if [ ! -d "${_folder}" ]
+    then
+        logging::error "No Cases home domain has been selected"
+        return 255
+    fi
+
+    case "${_mode}" in
+        all)
+            find "${_folder}" -mindepth 2 -maxdepth 2 -name 'TAGS' -exec cat {} \; | sort -u
+            ;;
+
+        *)
+            casetool::fetch_tags
+            ;;
+    esac
 }
 
 cases::requirements() {
