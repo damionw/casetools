@@ -19,38 +19,39 @@ cases::module() {
 }
 
 cases::list() {
-    local _folder="${CASETOOLS_BASE}"
+    local _base_folder="${CASETOOLS_BASE}"
     local _mode="${1:-all}"
     local _case
 
-    if [ ! -d "${_folder}" ]
+    if [ ! -d "${_base_folder}" ]
     then
-        logging::fatal "No Cases home domain has been selected"
-    else
-        find "${_folder}" -mindepth 1 -maxdepth 1 -type d -printf "%f\n" | while read _case
-        do
-            local _closed=$(test -e "${_folder}/${_case}/CLOSED" && echo true || echo false)
-            local _name="$(cases::label_to_name "${_case}")"
-
-            if [ "${_mode}" = "all" ]
-            then
-                :
-            elif [ "${_mode}" = "open" ]
-            then
-                ${_closed} && continue
-            elif [ "${_mode}" = "closed" ]
-            then
-                ${_closed} || continue
-            elif (casetool --case="${_name}" --tags | grep -iq '^'"${_mode}"'$')
-            then
-                :
-            else
-                continue
-            fi
-
-            echo "${_name}"
-        done | sort
+        logging::error "No Cases home domain has been selected"
+        return 255
     fi
+
+    find "${_base_folder}" -mindepth 1 -maxdepth 1 -type d -printf "%f\n" | while read _case
+    do
+        local _closed=$(test -e "${_base_folder}/${_case}/CLOSED" && echo true || echo false)
+        local _name="$(cases::label_to_name "${_case}")"
+
+        if [ "${_mode}" = "all" ]
+        then
+            :
+        elif [ "${_mode}" = "open" ]
+        then
+            ${_closed} && continue
+        elif [ "${_mode}" = "closed" ]
+        then
+            ${_closed} || continue
+        elif (casetool::fetch_tags "${_base_folder}/${_case}" | grep -iq '^'"${_mode}"'$')
+        then
+            :
+        else
+            continue
+        fi
+
+        echo "${_name}"
+    done | sort
 }
 
 cases::label_to_name() {
@@ -129,7 +130,7 @@ cases::selected() {
 casetool::tag_registry() {
     local _case_folder=
 
-    if ! _case_folder="$(cases::selected)"
+    if ! _case_folder="${1:-$(cases::selected)}"
     then
         return $?
     fi
@@ -140,7 +141,7 @@ casetool::tag_registry() {
 casetool::fetch_tags() {
     local _tag_repo=
 
-    if ! _tag_repo="$(casetool::tag_registry)"
+    if ! _tag_repo="$(casetool::tag_registry "${1}")"
     then
         return $?
     elif [ ! -f "${_tag_repo}" ]
@@ -157,7 +158,7 @@ casetool::save_tags() {
 
     local _tag_repo=
 
-    if ! _tag_repo="$(casetool::tag_registry)"
+    if ! _tag_repo="$(casetool::tag_registry "${1}")"
     then
         return $?
     elif ! (sed -e '/^[ ]*$/d' | sort -u > "${_tag_repo}")
@@ -202,10 +203,10 @@ casetool::remove_tag() {
 }
 
 casetool::list_tags() {
-    local _folder="${CASETOOLS_BASE}"
+    local _base_folder="${CASETOOLS_BASE}"
     local _mode="${1}"
 
-    if [ ! -d "${_folder}" ]
+    if [ ! -d "${_base_folder}" ]
     then
         logging::error "No Cases home domain has been selected"
         return 255
@@ -213,11 +214,11 @@ casetool::list_tags() {
 
     case "${_mode}" in
         all)
-            find "${_folder}" -mindepth 2 -maxdepth 2 -name 'TAGS' -exec cat {} \; | sort -u
+            find "${_base_folder}" -mindepth 2 -maxdepth 2 -name 'TAGS' -exec cat {} \; | sort -u
             ;;
 
         *)
-            casetool::fetch_tags
+            casetool::fetch_tags "${2}"
             ;;
     esac
 }
