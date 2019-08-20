@@ -314,12 +314,6 @@ cases::create() {
             #--------------------------------- CUT HERE -------------------------------------
 
             __import__("code").interact(local=dict(globals().items() + locals().items()))
-
-            LOG.info("Finished")
-                EOF
-            }
-
-            exec python <(get_python_script) "$@"
         EOF
     }
 

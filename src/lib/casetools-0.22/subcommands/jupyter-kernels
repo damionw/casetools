@@ -80,6 +80,8 @@ eval set -- "$OPTION_TEMP"
 # NOTE: The command line parameters are available for scripts which
 #       source this file.
 #===================================================================================
+casename="$(casetool --case)"
+
 while true
 do
     case "$1" in
