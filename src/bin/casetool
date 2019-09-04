@@ -35,7 +35,7 @@ else
 
     if [ -x "${subcommand}" ]
     then
-        exec "${subcommand}" "$@"
+        PATH="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")"):${PATH}" exec "${subcommand}" "$@"
     else
         logging::fatal "No such command '${subcommand}'"
     fi
