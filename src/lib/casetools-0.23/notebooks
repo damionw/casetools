@@ -31,7 +31,7 @@ cases::notebooks::install_project_kernel() {
         \$(which pip) install setuptools --ignore-installed &&
         \$(which pip) install ipykernel>=4.1.1 tornado>=4.0 --ignore-installed &&
         python -m ipykernel install --user --name '${_label}' --display-name '${_project}' || {
-            logging::error 'Failed installing kernel ${_label}'
+            echo 'Failed installing kernel ${_label}' >&2
             _status=255
         }
     "
