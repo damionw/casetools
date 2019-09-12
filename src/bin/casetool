@@ -310,7 +310,7 @@ do
             if _folder="$(cases::selected)" _case="$(cases::case)"
             then
                 logging::warning "Entering environment $(virtualenv::path)"
-                konsoleprofile colors=Casetool >/dev/null 2>&1 || true
+                konsoleprofile colors=Casetool 2>/dev/null || true
 
                 (
                     cd "${_folder}" &&
