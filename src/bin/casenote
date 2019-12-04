@@ -128,6 +128,6 @@ done
 casetool --case="${casename}" --exec='
     . "$(casetool --lib)"
     filename="$(cases::folder::notes)/$(date +"note-%Y-%m-%d:%H:%M.txt")"
-    date +"*** +%D-%m-%y %H:%M:%S ***" >> "${filename}"
+    date +"*** +%Y-%m-%y %H:%M:%S ***" >> "${filename}"
     exec kate -n "${filename}"
 '
