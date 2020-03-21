@@ -80,7 +80,7 @@ cases::suites::get_eligible_services() {
 }
 
 cases::suites::update_project_services() {
-    local _eligible _installed
+    local _eligible _installed _row
 
     if ! _eligible="$(cases::suites::get_eligible_services)"
     then
@@ -92,7 +92,29 @@ cases::suites::update_project_services() {
         return 124
     fi
 
-    echo "${_eligible}"
+    local _need_installation="$(
+        echo "${_eligible}" | while read _row
+        do
+            if (echo "${_installed}" | grep -q '^'"${_row}"'$')
+            then
+                continue
+            fi
+
+            echo "${_row}"
+        done
+    )"
+
+    local _need_removal="$(
+        echo "${_installed}" | while read _row
+        do
+            if (echo "${_eligible}" | grep -q '^'"${_row}"'$')
+            then
+                continue
+            fi
+
+            echo "${_row}"
+        done
+    )"
 }
 
 cases::suites::remove_project_services() {
