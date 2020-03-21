@@ -19,10 +19,9 @@ showhelp() {
     "
 
     local -A _keywords=(
-        ["case:"]="Select a project"
-        [install]="Install project as a jupyter kernel"
+        [install::]="Install project as a jupyter kernel"
         [list]="List currently installed project kernels"
-        [remove]="Remove project as a jupyter kernel"
+        [remove::]="Remove project as a jupyter kernel"
         [debug]="Expose debug level logging"
         [info]="Expose normal level logging"
         [warning]="Expose error level logging"
@@ -63,7 +62,7 @@ showhelp() {
 #       will cause the first non option parameter to be discarded. Here, we just
 #       use -h (help)
 #===================================================================================
-long_options="help,version,debug,info,warning,error,fatal,version,install,remove,case:,list"
+long_options="help,version,debug,info,warning,error,fatal,version,install::,remove::,list"
 
 OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
 
@@ -80,7 +79,7 @@ eval set -- "$OPTION_TEMP"
 # NOTE: The command line parameters are available for scripts which
 #       source this file.
 #===================================================================================
-casename="$(cases::case)"
+default_case="$(cases::case 2>/dev/null)"
 
 while true
 do
@@ -96,19 +95,14 @@ do
             exit
             ;;
 
-        --case)
-            casename="${2}"
+        --install)
+            cases::notebooks::install_project_kernel "${2:-${default_case}}"
             shift 2
             ;;
 
-        --install)
-            cases::notebooks::install_project_kernel "${casename}"
-            shift
-            ;;
-
         --remove)
-            cases::notebooks::remove_project_kernel "${casename}"
-            shift
+            cases::notebooks::remove_project_kernel "${2:-${default_case}}"
+            shift 2
             ;;
 
         --version)

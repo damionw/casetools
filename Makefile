@@ -3,7 +3,9 @@ PACKAGE_VERSION := $(shell bash -c '. src/lib/$(PACKAGE_NAME) 2>/dev/null; caset
 INSTALL_PATH := $(shell python -c 'import sys; print sys.prefix if hasattr(sys, "real_prefix") else exit(255)' 2>/dev/null || echo "/usr/local")
 LIB_COMPONENTS := $(wildcard src/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/*)
 BIN_COMPONENTS := $(foreach name, $(wildcard src/bin/*), build/bin/$(notdir $(name)))
-DIR_COMPONENTS := $(foreach name, bin share lib, build/$(name)) build/share/$(PACKAGE_NAME)
+DIR_COMPONENTS := $(foreach name, bin share lib, build/$(name)) build/share/$(PACKAGE_NAME) packages
+DEBIAN_ARCHIVE := packages/$(PACKAGE_NAME)-$(PACKAGE_VERSION).deb
+UPLOAD_REPO := /repository/share/Software/Platform/linux/private
 
 .PHONY: tests clean help
 
@@ -13,6 +15,19 @@ help:
 	@echo "Usage: make build|tests|all|clean|version|install"
 
 build: build/lib/$(PACKAGE_NAME) $(BIN_COMPONENTS)
+
+deb: $(DEBIAN_ARCHIVE)
+
+upload: deb
+	@rsync -avz $(DEBIAN_ARCHIVE) $(UPLOAD_REPO)/
+
+$(DEBIAN_ARCHIVE): build packages
+	@debianizer \
+		--source=build \
+		--root=/usr/local \
+		--target="$@" \
+		--package="$(PACKAGE_NAME)" \
+		--version="$(PACKAGE_VERSION)"
 
 install-private: tests $(HOME)/bin
 	@echo "Privately installing into directory '$(HOME)'"
