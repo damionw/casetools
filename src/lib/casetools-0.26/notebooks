@@ -27,9 +27,9 @@ cases::notebooks::install_project_kernel() {
     fi
 
     sed -e 's/^        //g' > "${_installer_filename}" <<< "
-        easy_install pip~=9.0.1 &&
+        easy_install pip==9.0.1 &&
         \$(which pip) install setuptools --ignore-installed &&
-        \$(which pip) install ipykernel>=4.1.1 tornado>=4.0 --ignore-installed &&
+        \$(which pip) install ipykernel>=4.1.1 tornado==4.4.2 --ignore-installed &&
         python -m ipykernel install --user --name '${_label}' --display-name '${_project}' || {
             echo 'Failed installing kernel ${_label}' >&2
             _status=255
