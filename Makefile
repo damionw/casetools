@@ -14,9 +14,6 @@ all: build
 help:
 	@echo "Usage: make build|tests|all|clean|version|install"
 
-demo: build
-	@build/bin/casetool suite_services --install
-
 build: build/lib/$(PACKAGE_NAME) $(BIN_COMPONENTS)
 
 deb: $(DEBIAN_ARCHIVE)

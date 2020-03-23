@@ -53,7 +53,7 @@ cases::suites::get_installed_services() {
 
     cases::suites::get_installation_files | while read _reactor
     do
-        cases::name_to_label "$(basename "${_reactor}")"
+        basename "${_reactor}"
     done
 }
 
@@ -80,7 +80,7 @@ cases::suites::get_eligible_services() {
 }
 
 cases::suites::update_project_services() {
-    local _eligible _installed _row
+    local _eligible _installed _row _folder
 
     if ! _eligible="$(cases::suites::get_eligible_services)"
     then
@@ -90,6 +90,9 @@ cases::suites::update_project_services() {
     then
         logging::error "Can't determine installed project services"
         return 124
+    elif ! _folder="$(cases::suites::folder)"
+    then
+        return $?
     fi
 
     local _need_installation="$(
@@ -115,6 +118,41 @@ cases::suites::update_project_services() {
             echo "${_row}"
         done
     )"
+
+    local _sentinel="$(cases::suites::get_sentinel)"
+    local _new_service _old_service
+
+    if [ -n "${_need_installation}" ]
+    then
+        while read _new_service
+        do
+            local _case="$(cases::label_to_name "${_new_service}")"
+
+            logging::warning "Installing reactor for project '$(cases::label_to_name "${_new_service}")'"
+
+            {
+                echo '#!/usr/bin/env bash'
+                echo
+                echo "#${_sentinel}"
+                echo
+                echo 'reactor::depends() {'
+                echo '    :'
+                echo '}'
+                echo 'reactor::run() {'
+                echo "    casetool --case='${_case}' --exec='start_service'"
+                echo '}'
+            } > "${_folder}/${_new_service}"
+        done <<< "${_need_installation}"
+    fi
+
+    if [ -n "${_need_removal}" ]
+    then
+        while read _old_service
+        do
+            logging::warning "Removing reactor for project '$(cases::label_to_name "${_old_service}")'"
+            rm "${_folder}/${_old_service}"
+        done <<< "${_need_removal}"
+    fi
 }
 
 cases::suites::remove_project_services() {
@@ -122,7 +160,7 @@ cases::suites::remove_project_services() {
 
     cases::suites::get_installation_files | while read _reactor
     do
-        logging::warning "Removing reactor $(cases::name_to_label "$(basename "${_reactor}")")"
+        logging::warning "Removing reactor for project '$(cases::label_to_name "$(basename "${_reactor}")")'"
         rm "${_reactor}"
     done
 }

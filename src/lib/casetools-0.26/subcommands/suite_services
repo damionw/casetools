@@ -19,9 +19,9 @@ showhelp() {
     "
 
     local -A _keywords=(
-        [install]="Install project as a jupyter kernel"
-        [list]="List currently installed project kernels"
-        [remove]="Remove project as a jupyter kernel"
+        [update]="Maintain projects as suite services"
+        [list]="List currently installed suite services"
+        [remove]="Remove all managed suite services"
         [debug]="Expose debug level logging"
         [info]="Expose normal level logging"
         [warning]="Expose error level logging"
@@ -62,7 +62,7 @@ showhelp() {
 #       will cause the first non option parameter to be discarded. Here, we just
 #       use -h (help)
 #===================================================================================
-long_options="help,version,debug,info,warning,error,fatal,version,install,remove,list"
+long_options="help,version,debug,info,warning,error,fatal,version,update,remove,list"
 
 OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
 
@@ -93,7 +93,7 @@ do
             exit
             ;;
 
-        --install)
+        --update)
             cases::suites::update_project_services
             shift
             ;;
