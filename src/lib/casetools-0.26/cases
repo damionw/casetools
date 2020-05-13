@@ -432,7 +432,7 @@ cases::create() {
 
     if [ -d "${_path}/Environment" ] || virtualenv::create "${_path}/Environment"
     then
-        ( . "${_path}/Environment/bin/activate" && easy_install pip && pip install wheel==0.31 setuptools)
+        ( . "${_path}/Environment/bin/activate" && python -m pip install pip wheel==0.31 setuptools --upgrade)
     else
         logging::fatal "Cannot prepare virtualenv in '${_path}'"
     fi
