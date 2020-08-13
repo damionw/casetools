@@ -61,6 +61,7 @@ showhelp() {
         [update]="Refresh all of the project dependencies",
         [requirements]="List the project's existing dependencies",
         [date]="Provide the project's creation date",
+        [create]="Create project if missing",
         [browse]="Open a file browser in the project's home directory",
         [exec:]="Run a shell command in the selected project's virtualenv",
         [where]="Display the project's home directory",
@@ -113,6 +114,7 @@ long_options="${long_options}${long_options:+,}case::,shell,console,description:
 long_options="${long_options}${long_options:+,}list::,update,requirements,date,browse,exec:,where"
 long_options="${long_options}${long_options:+,}exclude:,home::,pack:,unpack:,detect:,commands"
 long_options="${long_options}${long_options:+,}tag:,untag:,tags::"
+long_options="${long_options}${long_options:+,}create"
 
 OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
 
@@ -130,6 +132,7 @@ eval set -- "$OPTION_TEMP"
 #       source this file.
 #===================================================================================
 excluded_folders=()
+create_project=false
 
 if [ -d "${CASETOOLS_BASE}" ]
 then
@@ -146,6 +149,11 @@ do
     case "$1" in
         --debug|--info|--warning|--fatal|--error)
             logging::set_severity "$(echo "${1}" | sed -e 's/^[\-]*//g')"
+            shift
+            ;;
+
+        --create)
+            create_project=true
             shift
             ;;
 
@@ -239,6 +247,9 @@ do
                 if [ -d "${_case_folder}" ]
                 then
                     :
+                elif ! ${create_project}
+                then
+                    logging::fatal "Will not create a new case '${_case}' in '${_case_folder}'"
                 elif ! cases::create "${_case_folder}" "${_name}"
                 then
                     logging::fatal "Cannot create case in '${_case_folder}'"

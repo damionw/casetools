@@ -53,12 +53,8 @@ cases::clone() {
         elif (echo "${_branch}" | grep -q '[\.]git$')
         then
             _checkout_name="$(basename "${_url}" | sed -e 's/[\.]git$//g')"
-        elif [ "${_branch}" = "master" ]
-        then
-            _checkout_name="${_reponame}-Master"
-            _url="git@${_servername}:${_username}/${_reponame}.git"
         else
-            _checkout_name="${_branch}"
+            _checkout_name="${_reponame}.${_branch}"
             _url="git@${_servername}:${_username}/${_reponame}.git"
         fi
     else
