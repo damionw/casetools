@@ -34,17 +34,22 @@ export CASETOOLS_SUBCOMMANDS="${lib_path}/subcommands"
 . "${lib_path}/packaging"
 . "${lib_path}/notebooks"
 . "${lib_path}/suites"
+
 . "$(bashlib --lib)"
 
 casetools::version() {
     echo "${CASETOOLS_VERSION}"
 }
 
-casetools::command_folder() {
+casetools::subcommands::path() {
     if [ -n "${CASETOOLS_SUBCOMMANDS}" -a -d "${CASETOOLS_SUBCOMMANDS}/." ]
     then
         echo "${CASETOOLS_SUBCOMMANDS}"
     fi
+}
+
+casetools::subcommands() {
+    find "$(casetools::subcommands::path)/" -mindepth 1 -maxdepth 1 -type f -executable -printf "%f\n" 2>/dev/null | sort
 }
 
 hash -r

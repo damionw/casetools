@@ -10,8 +10,10 @@ library_import_file="$(readlink -f "${local_path}/../lib/casetools")"
 #===================================================================================
 . "${library_import_file}"
 
-if ! . "$(bashlib --lib)"
+if [ $(bc <<< "$(bashlib --version) >= 0.22") = 1 ] && . "$(bashlib --lib)"
 then
+    :
+else
     logging::fatal "bashlib module requirement not satistified"
 fi
 
@@ -30,7 +32,7 @@ elif (echo "$1" | grep -q '^[\-]')
 then
     :
 else
-    subcommand="$(casetools::command_folder)/${1}"
+    subcommand="$(casetools::subcommands::path)/${1}"
     shift
 
     if [ -x "${subcommand}" ]
@@ -42,98 +44,8 @@ else
 fi
 
 #===================================================================================
-#                              Help Message
+#                          Verify Casetools home folder
 #===================================================================================
-showhelp() {
-    local _synopsis="
-        Manage Project Cases
-    "
-
-    local -A _keywords=(
-        ["case::"]="Select a project or provide the currently selected project"
-        ["detect:"]="Determine existence of a project"
-        [shell]="Run a console shell in the selected project virtualenv",
-        [console]="Run a console shell in the selected project's virtualenv",
-        [description::]="Provide or display the project's description",
-        [module::]="Provide a git package dependency or list the project's existing dependencies",
-        [modules::]="Provide a git package dependency or list the project's existing dependencies",
-        ["list::"]="List the known project names (open|closed)",
-        [update]="Refresh all of the project dependencies",
-        [requirements]="List the project's existing dependencies",
-        [date]="Provide the project's creation date",
-        [create]="Create project if missing",
-        [browse]="Open a file browser in the project's home directory",
-        [exec:]="Run a shell command in the selected project's virtualenv",
-        [where]="Display the project's home directory",
-        [home::]="Display or set the base directory where the projects are contained",
-        [pack:]="Archive the current project to a file",
-        [tag:]="Add a tag",
-        [untag:]="Remove a tag",
-        [tags::]="List tags (tags=all fetches tags from all projects)",
-        [exclude:]="Add folder to exclude from archiving",
-        [unpack:]="Restore an archived project from a file",
-        [help]="Display instructions"
-        [commands]="List available subcommands"
-    )
-
-    local _terms="$(echo "${@}" | awk -F, '{for (i=1; i <= NF; ++i) {print $i;}}')"
-    local _topic
-
-    local _contents="$(
-        echo "${_terms}" | awk -F: '{printf("%s[--%s%s]", sep, $1, (NF == 2 ? sprintf("=<%s>", $1) : "")); sep=" "}'
-        echo -en "${_synopsis:+\n}"
-        echo "${_synopsis}" | sed -e 's/^[ ]*//g' -e '/^[ ]*$/d'
-
-        echo "${_terms}" | {
-            _prefix="\n"
-
-            while read _topic
-            do
-                if [ -n "${_keywords["${_topic}"]}" ]
-                then
-                    _fill="$(for ((i=$(echo -n "${_topic}" | wc -c); i < 15; ++i)); do echo -n " "; done)"
-                    echo -e "${_prefix}--${_topic}${_fill}${_keywords["${_topic}"]}" | sed -e 's/^./    &/g'
-                    _prefix=""
-                fi
-            done
-        }
-    )"
-
-    echo "Usage: $0 ${_contents}" >&2
-}
-
-#===================================================================================
-# NOTE: There is a bug in getopts where not specifying at least one short option
-#       will cause the first non option parameter to be discarded. Here, we just
-#       use -h (help)
-#===================================================================================
-long_options=
-long_options="${long_options}${long_options:+,}help,version,lib"
-long_options="${long_options}${long_options:+,}debug,error,info,warning,fatal"
-long_options="${long_options}${long_options:+,}case::,shell,console,description::,module::,modules::"
-long_options="${long_options}${long_options:+,}list::,update,requirements,date,browse,exec:,where"
-long_options="${long_options}${long_options:+,}exclude:,home::,pack:,unpack:,detect:,commands"
-long_options="${long_options}${long_options:+,}tag:,untag:,tags::"
-long_options="${long_options}${long_options:+,}create"
-
-OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
-
-if [ $? != 0 ]
-then
-    logging::fatal "Invalid command line options ${OPTION_TEMP}"
-fi
-
-eval set -- "$OPTION_TEMP"
-
-#===================================================================================
-#                       Process command line parameters
-#
-# NOTE: The command line parameters are available for scripts which
-#       source this file.
-#===================================================================================
-excluded_folders=()
-create_project=false
-
 if [ -d "${CASETOOLS_BASE}" ]
 then
     :
@@ -144,271 +56,253 @@ else
     logging::fatal "Can't use casetool environments in folder '${CASETOOLS_BASE}'"
 fi
 
-while true
-do
-    case "$1" in
-        --debug|--info|--warning|--fatal|--error)
-            logging::set_severity "$(echo "${1}" | sed -e 's/^[\-]*//g')"
-            shift
-            ;;
+#===================================================================================
+#                           Initialize Option Defaults
+#===================================================================================
+excluded_folders=()
+create_project=false
 
-        --create)
-            create_project=true
-            shift
-            ;;
+#===================================================================================
+#                           Command line option handlers
+#===================================================================================
+select_project() {
+    if [ -n "${1}" ]
+    then
+        _name="${1}"
+        _case="$(echo "${_name}" | url::encode)"
+        _case_folder="${CASETOOLS_BASE}/${_case}"
+        _just_created=false
 
-        --detect)
-            _name="${2}"
-            shift 2
-            _case="$(echo "${_name}" | url::encode)"
-            _case_folder="${CASETOOLS_BASE}/${_case}"
+        if [ -d "${_case_folder}" ]
+        then
+            :
+        elif ! ${create_project}
+        then
+            logging::fatal "Will not create a new case '${_case}' in '${_case_folder}'"
+        elif ! cases::create "${_case_folder}" "${_name}"
+        then
+            logging::fatal "Cannot create case in '${_case_folder}'"
+        else
+            _just_created=true
+        fi
 
-            if [ -n "${_name}" -a -d "${_case_folder}" -a -d "${_case_folder}/Environment" ]
-            then
-                logging::debug "Case ${_name} exists"
-                exit 0
-            fi
+        if . "${_case_folder}/Environment/bin/activate"
+        then
+            logging::warning "Selected virtual environment in '$(virtualenv::path)'"
+            export CASETOOLS_CASE="${_case}" CASETOOLS_HOME="${CASETOOLS_BASE}/${_case}"
+            export LD_LIBRARY_PATH="$(virtualenv::path)/lib:${LD_LIBRARY_PATH}"
+        else
+            logging::fatal "Cannot select virtual environment in '${_case_folder}'"
+        fi
 
-            logging::warning "Case ${_name} doesn't exist"
-            exit 255
-            ;;
+        if ${_just_created}
+        then
+            # cases::module "https://github.com/damionw/webserve.git" &&
+            cases::description "${_name}" ||
+            logging::fatal "Cannot install required modules"
+        fi
+    elif [ -n "${CASETOOLS_CASE}" ]
+    then
+        echo "Selected case '$(echo "${CASETOOLS_CASE}" | url::decode)' in folder '${CASETOOLS_BASE}'"
+    else
+        echo "No case has been selected"
+    fi
+}
 
-        --home)
-            if [ -z "${2}" ]
-            then
-                echo ${CASETOOLS_BASE}
-                exit 0
-            elif [ ! -d "${2}" ]
-            then
-                logging::error "Project group folder '${2}' doesn't exist"
-                exit 255
-            else
-                export CASETOOLS_BASE="${2}"
-            fi
+execute_project_console() {
+    local _folder _rc_options
 
-            shift 2
-            ;;
+    if _folder="$(cases::selected)" _case="$(cases::case)"
+    then
+        logging::warning "Entering environment $(virtualenv::path)"
+        konsoleprofile colors=Casetool 2>/dev/null || true
 
-        --list)
-            cases::list "${2:-all}"
-            shift 2
-            ;;
+        (
+            cd "${_folder}" &&
+            _rc_options="$(test -f .profile && echo --posix || echo --norc)" &&
+            ENV="${_folder}/.profile" HISTFILE="${_folder}/.bash_history" PS1="[${_case}]> " exec bash --noprofile ${_rc_options} -i <&2 >&2
+        )
 
-        --module|--modules)
-            if [ -z "${2}" ]
-            then
-                cases::requirements
-            else
-                cases::module "${2}"
-            fi
+        logging::warning "Exiting environment $(virtualenv::path)"
+    fi
 
-            shift 2
-            ;;
+    exit 0
+}
 
-        --requirements)
-            cases::requirements
-            shift
-            ;;
+execute_project_command() {
+    local _command _folder _status=0
 
-        --date)
-            cases::date
-            shift
-            ;;
+    _command="${1}"
+    
+    if ! _folder="$(cases::selected)" _case="$(cases::case)"
+    then
+        logging::fatal "No environment selected"
+        _status=$?
+    else
+        logging::warning "Entering environment $(virtualenv::path)"
 
-        --description)
-            cases::description "${2}"
-            shift 2
-            ;;
+        (
+            cd "${_folder}" &&
+            ENV="${_folder}/.profile" exec bash --noprofile -c ". .profile; ${_command}" && _status=$?
+        )
+        _status=$?
 
-        --exclude)
-            excluded_folders[${#excluded_folders[@]}]="${2}"
-            shift 2
-            ;;
+        logging::warning "Exiting environment $(virtualenv::path)"
+    fi
 
-        --update)
-            _requirements="$(cases::requirements)"
+    exit ${_status}
+}
 
-            echo "${_requirements}" | while read _url
-            do
-                cases::module "${_url}"
-            done
+enable_project_creation() {
+    create_project=true
+}
 
-            shift
-            ;;
+set_logging() {
+    logging::set_severity "$(echo "${1}" | sed -e 's/^[\-]*//g')"
+}
 
-        --case)
-            if [ -n "${2}" ]
-            then
-                _name="${2}"
-                _case="$(echo "${_name}" | url::encode)"
-                _case_folder="${CASETOOLS_BASE}/${_case}"
-                _just_created=false
+show_library_path() {
+    echo "${library_import_file}"
+}
 
-                if [ -d "${_case_folder}" ]
-                then
-                    :
-                elif ! ${create_project}
-                then
-                    logging::fatal "Will not create a new case '${_case}' in '${_case_folder}'"
-                elif ! cases::create "${_case_folder}" "${_name}"
-                then
-                    logging::fatal "Cannot create case in '${_case_folder}'"
-                else
-                    _just_created=true
-                fi
+detect_project() {
+    _name="${1}"
+    _case="$(echo "${_name}" | url::encode)"
+    _case_folder="${CASETOOLS_BASE}/${_case}"
 
-                if . "${_case_folder}/Environment/bin/activate"
-                then
-                    logging::warning "Selected virtual environment in '$(virtualenv::path)'"
-                    export CASETOOLS_CASE="${_case}" CASETOOLS_HOME="${CASETOOLS_BASE}/${_case}"
-                    export LD_LIBRARY_PATH="$(virtualenv::path)/lib:${LD_LIBRARY_PATH}"
-                else
-                    logging::fatal "Cannot select virtual environment in '${_case_folder}'"
-                fi
+    if [ -n "${_name}" -a -d "${_case_folder}" -a -d "${_case_folder}/Environment" ]
+    then
+        logging::debug "Case ${_name} exists"
+        exit 0
+    fi
 
-                if ${_just_created}
-                then
-                    # cases::module "https://github.com/damionw/webserve.git" &&
-                    cases::description "${_name}" ||
-                    logging::fatal "Cannot install required modules"
-                fi
-            elif [ -n "${CASETOOLS_CASE}" ]
-            then
-                echo "Selected case '$(echo "${CASETOOLS_CASE}" | url::decode)' in folder '${CASETOOLS_BASE}'"
-            else
-                echo "No case has been selected"
-            fi
+    logging::warning "Case ${_name} doesn't exist"
+    exit 255
+}
 
-            shift 2
-            ;;
+list_project_tags() {
+    casetool::list_tags "${1}"
+    exit 0
+}
 
-        --browse)
-            _folder="$(cases::selected)" && xdg-open "${_folder}"
-            exit $?
-            shift
-            ;;
+add_excluded_project() {
+    excluded_folders[${#excluded_folders[@]}]="${1}"
+}
 
-        --where)
-            _folder="$(cases::selected)" && echo "${_folder}"
-            exit $?
-            shift
-            ;;
+pack_project() {
+    local _archive_file _passphrase
 
-        --exec)
-            _command="${2}"
-            shift 2
+    if _archive_file="${1:?Please provide an archive file to create}" && read -p "Enter passphrase: " -s _passphrase
+    then
+        echo
+    else
+        exit 255
+    fi
 
-            if ! _folder="$(cases::selected)" _case="$(cases::case)"
-            then
-                logging::fatal "No environment selected"
-                _status=$?
-            else
-                logging::warning "Entering environment $(virtualenv::path)"
+    if cases::packaging::key "${_passphrase}" && cases::packaging::pack "${excluded_folders[@]}" > "${_archive_file}"
+    then
+        logging::info "Wrote archive of '$(cases::case)' to '${_archive_file}'"
+    fi
 
-                (
-                    cd "${_folder}" &&
-                    ENV="${_folder}/.profile" exec bash --noprofile -c ". .profile; ${_command}" && _status=$?
-                )
-                _status=$?
+    exit $?
+}
 
-                logging::warning "Exiting environment $(virtualenv::path)"
-            fi
+unpack_project() {
+    if _archive_file="${1:?Please provide an archive file to restore}" && read -p "Enter passphrase: " -s _passphrase
+    then
+        echo
+    else
+        exit 255
+    fi
 
-            exit ${_status}
-            ;;
+    shift 2
 
-        --shell|--console)
-            if _folder="$(cases::selected)" _case="$(cases::case)"
-            then
-                logging::warning "Entering environment $(virtualenv::path)"
-                konsoleprofile colors=Casetool 2>/dev/null || true
+    cases::packaging::key "${_passphrase}" && cases::packaging::unpack < "${_archive_file}"
+    exit $?
+}
 
-                (
-                    cd "${_folder}" &&
-                    _rc_options="$(test -f .profile && echo --posix || echo --norc)" &&
-                    ENV="${_folder}/.profile" HISTFILE="${_folder}/.bash_history" PS1="[${_case}]> " exec bash --noprofile ${_rc_options} -i <&2 >&2
-                )
+select_home_folder() {
+    if [ -z "${1}" ]
+    then
+        echo ${CASETOOLS_BASE}
+        exit 0
+    elif [ ! -d "${1}" ]
+    then
+        logging::error "Project group folder '${2}' doesn't exist"
+        exit 255
+    else
+        export CASETOOLS_BASE="${2}"
+    fi
+}
 
-                logging::warning "Exiting environment $(virtualenv::path)"
-            fi
+select_modules() {
+    if [ -z "${1}" ]
+    then
+        cases::requirements
+    else
+        cases::module "${1}"
+    fi
+}
 
-            shift
-            exit 0
-            ;;
+refresh_project_dependencies() {
+    _requirements="$(cases::requirements)"
 
-        --lib)
-            echo "${library_import_file}"
-            shift
-            exit 0
-            ;;
+    echo "${_requirements}" | while read _url
+    do
+        cases::module "${_url}"
+    done
+}
 
-        --pack)
-            if _archive_file="${2:?Please provide an archive file to create}" && read -p "Enter passphrase: " -s _passphrase
-            then
-                echo
-            else
-                exit 255
-            fi
+get_project_folder() {
+    local _folder
+    _folder="$(cases::selected)" && echo "${_folder}"
+    exit $?
+}
 
-            shift 2
+open_project_browser() {
+    local _folder
+    _folder="$(cases::selected)" && xdg-open "${_folder}"
+    exit $?
+}
 
-            if cases::packaging::key "${_passphrase}" && cases::packaging::pack "${excluded_folders[@]}" > "${_archive_file}"
-            then
-                logging::info "Wrote archive of '$(cases::case)' to '${_archive_file}'"
-            fi
-            exit $?
-            ;;
+#===================================================================================
+#                           Process command line options
+#===================================================================================
+optionslib::parse::description "Manage Project Cases"
 
-        --unpack)
-            if _archive_file="${2:?Please provide an archive file to restore}" && read -p "Enter passphrase: " -s _passphrase
-            then
-                echo
-            else
-                exit 255
-            fi
+optionslib::parse::config "
+    long_options=--help short_options=-h action=show_help description='Display instructions'
+    long_options=--debug action=command name=set_logging description='Expose debug level logging'
+    long_options=--info action=command name=set_logging  description='Expose normal level logging'
+    long_options=--warning action=command name=set_logging  description='Expose error level logging'
+    long_options=--error action=command name=set_logging  description='Expose error level logging'
+    long_options=--fatal action=command name=set_logging  description='Expose fatal error level logging'
+    long_options=--lib action=command name=show_library_path description='Provide the library module import file'
+    long_options=--version short_options=-v action=command name=casetools::version description='Produce the library version string'
+    long_options=--commands action=command name=casetools::subcommands description='List available subcommands'
+    long_options=--case:: action=command name=select_project description='Select a project or provide the currently selected project'
+    long_options=--shell,--console action=command name=execute_project_console description='Run a console shell in the selected project virtualenv'
+    long_options=--browse action=command name=open_project_browser description='Open a file browser in the project home directory'
+    long_options=--exec: action=command name=execute_project_command description='Run a shell command in the selected project virtualenv'
+    long_options=--where action=command name=get_project_folder description='Display the project home directory'
+    long_options=--requirements action=command name=cases::requirements description='List the project existing dependencies'
+    long_options=--update action=command name=refresh_project_dependencies description='Refresh all of the project dependencies'
+    long_options=--description:: action=command name=cases::description description='Provide or display the project description'
+    long_options=--module::,--modules:: action=command name=select_modules description='Provide a git package dependency or list the project existing dependencies'
+    long_options=--list:: action=command name=cases::list description='List the known project names (open|closed)'
+    long_options=--date action=command name=cases::date description='Provide the project creation date'
+    long_options=--detect: action=command name=detect_project description='Determine existence of a project'
+    long_options=--home:: action=command name=select_home_folder description='Display or set the base directory where the projects are contained'
+    long_options=--pack: action=command name=pack_project description='Archive the current project to a file'
+    long_options=--unpack: action=command name=unpack_project description='Restore an archived project from a file'
+    long_options=--create action=command name=enable_project_creation description='Create project if missing'
+    long_options=--tag: action=command name=casetool::add_tag description='Add a tag'
+    long_options=--untag: action=command name=casetool::remove_tag description='Remove a tag'
+    long_options=--tags:: action=command name=list_project_tags description='List tags (tags=all fetches tags from all projects)'
+    long_options=--exclude: action=command name=add_excluded_project description='Add folder to exclude from archiving'
+"
 
-            shift 2
-
-            cases::packaging::key "${_passphrase}" && cases::packaging::unpack < "${_archive_file}"
-            exit $?
-            ;;
-
-        --version)
-            casetools::version
-            shift
-            exit 0
-            ;;
-
-        --commands)
-            find "$(casetools::command_folder)/" -mindepth 1 -maxdepth 1 -type f -executable -printf "%f\n" | sort
-            shift
-            exit 0
-            ;;
-
-        --tag)
-            casetool::add_tag "${2}"
-            shift 2
-            ;;
-
-        --untag)
-            casetool::remove_tag "${2}"
-            shift 2
-            ;;
-
-        --tags)
-            casetool::list_tags ${2}
-            shift 2
-            exit 0
-            ;;
-
-        --)
-            shift
-            break
-            ;;
-
-        *)
-            showhelp "${long_options}" >&2
-            exit 0
-            ;;
-    esac
-done
+if ! optionslib::parse::parse_arguments "$@"
+then
+    exit $?
+fi
