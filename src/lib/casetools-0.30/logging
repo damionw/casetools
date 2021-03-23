@@ -17,13 +17,13 @@ logging::get_levels() {
     local _severity=
 
     ordered_severities() {
-        sed -e 's/^[ ]*//g' -e '/^$/d' <<"        EOF"
+        sed -e 's/^[ ]*//g' -e '/^$/d' <<<"
             fatal
             error
             warning
             info
             debug
-        EOF
+        "
     }
 
     ordered_severities | while read _severity
@@ -38,33 +38,37 @@ logging::get_levels() {
 }
 
 logging::format() {
+    local _retval=$?
     local _mode="${1}"
+    local _pid=$$
     shift
 
     if (logging::get_levels | grep -q '^'"${_mode}"'$')
     then
-        echo "$(echo "${_mode}" | tr '[a-z]' '[A-Z]'): $*" >&2
+        echo "$(date '+%Y-%m-%d %H:%M:%S') [$(echo "${_mode}" | tr '[a-z]' '[A-Z]')] <${_pid}>: $@" >&2
     fi
+
+    return ${_retval}
 }
 
 logging::fatal() {
-    logging::format fatal $@
+    logging::format fatal "$@"
     exit 255
 }
 
+logging::error() {
+    logging::format error "$@"
+}
+
 logging::warning() {
-    logging::format warning $@
+    logging::format warning "$@"
 }
 
 logging::info() {
-    logging::format info $@
-}
-
-logging::error() {
-    logging::format error $@
+    logging::format info "$@"
 }
 
 logging::debug() {
-    logging::format debug $@
+    logging::format debug "$@"
 }
 

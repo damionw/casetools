@@ -47,7 +47,9 @@ tests: build
 clean:
 	-@rm -rf build checkouts
 
-build/lib/$(PACKAGE_NAME): build/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION) build/lib src/lib/$(PACKAGE_NAME)
+build/lib/$(PACKAGE_NAME): build/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION) build/lib src/lib/$(PACKAGE_NAME) \
+	src/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/option_parsing \
+	src/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/logging
 	@install -m 755 src/lib/$(PACKAGE_NAME) $@
 
 build/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION): build/lib $(LIB_COMPONENTS)
@@ -55,6 +57,20 @@ build/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION): build/lib $(LIB_COMPONENTS)
 
 build/bin/%: build/lib/$(PACKAGE_NAME) build/bin | src/bin
 	@install -m 755 src/bin/$(notdir $@) $@
+
+src/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/option_parsing: checkouts/optionslib
+	@cd $< && make all
+	@cp $</build/lib/optionslib-$$($</build/bin/optionslib --version)/parse $@
+
+src/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/logging: checkouts/bashlib
+	@cd $< && make all
+	@cp $</build/lib/bashLib-$$($</build/bin/bashlib --version)/logging $@
+
+checkouts/optionslib:
+	@git clone https://github.com/damionw/optionslib.git $@
+
+checkouts/bashlib:
+	@git clone https://github.com/damionw/bashlib.git $@
 
 $(DIR_COMPONENTS):
 	@install -d $@

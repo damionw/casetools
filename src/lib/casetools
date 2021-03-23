@@ -27,6 +27,7 @@ lib_path="${local_path}/${package_name}-${CASETOOLS_VERSION}"
 export CASETOOLS_SUBCOMMANDS="${lib_path}/subcommands"
 
 . "${lib_path}/logging"
+. "${lib_path}/option_parsing"
 . "${lib_path}/exceptions"
 . "${lib_path}/cases"
 . "${lib_path}/paths"

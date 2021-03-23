@@ -133,7 +133,7 @@ execute_project_command() {
     local _command _folder _status=0
 
     _command="${1}"
-    
+
     if ! _folder="$(cases::selected)" _case="$(cases::case)"
     then
         logging::fatal "No environment selected"
