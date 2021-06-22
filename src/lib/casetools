@@ -23,8 +23,10 @@ export CASETOOLS_VERSION="$(
 )"
 
 lib_path="${local_path}/${package_name}-${CASETOOLS_VERSION}"
+share_path="$(readlink -f "${local_path}/../share/${package_name}")"
 
 export CASETOOLS_SUBCOMMANDS="${lib_path}/subcommands"
+export CASETOOLS_SHARE="${share_path}"
 
 . "${lib_path}/logging"
 . "${lib_path}/option_parsing"
@@ -36,8 +38,6 @@ export CASETOOLS_SUBCOMMANDS="${lib_path}/subcommands"
 . "${lib_path}/notebooks"
 . "${lib_path}/suites"
 
-. "$(bashlib --lib)"
-
 casetools::version() {
     echo "${CASETOOLS_VERSION}"
 }
@@ -46,6 +46,13 @@ casetools::subcommands::path() {
     if [ -n "${CASETOOLS_SUBCOMMANDS}" -a -d "${CASETOOLS_SUBCOMMANDS}/." ]
     then
         echo "${CASETOOLS_SUBCOMMANDS}"
+    fi
+}
+
+casetools::share::path() {
+    if [ -n "${CASETOOLS_SHARE}" -a -d "${CASETOOLS_SHARE}/." ]
+    then
+        echo "${CASETOOLS_SHARE}"
     fi
 }
 

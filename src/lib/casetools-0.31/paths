@@ -35,3 +35,7 @@ cases::folder::docs() {
 cases::folder::tools() {
     cases::folder::_exists "$(cases::selected)/Tools"
 }
+
+cases::folder::icons() {
+    cases::folder::_exists "$(casetools::share::path)/png"
+}
