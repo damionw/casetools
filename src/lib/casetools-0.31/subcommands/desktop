@@ -50,13 +50,14 @@ update_desktop_folder() {
 
     logging::warning "Updating in '${_folder}'"
 
-    rm "${_folder}/*.desktop" >/dev/null 2>&1
-
     local _project_name
 
+    find "${_folder}" -type f -exec grep -q '\[Desktop Entry' {} \; -exec rm {} \;
+ 
     casetool --list | while read _project_name
     do
-        create_project_desktop_entry "${_project_name}" > "${_folder}/${_project_name}.desktop"
+        create_project_desktop_entry "${_project_name}" > "${_folder}/${_project_name}"
+        chmod u+rx "${_folder}/${_project_name}"
     done
 }
 
