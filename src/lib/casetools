@@ -37,6 +37,7 @@ export CASETOOLS_SHARE="${share_path}"
 . "${lib_path}/packaging"
 . "${lib_path}/notebooks"
 . "${lib_path}/suites"
+. "${lib_path}/url"
 
 casetools::version() {
     echo "${CASETOOLS_VERSION}"
