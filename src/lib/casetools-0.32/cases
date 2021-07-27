@@ -386,8 +386,7 @@ cases::create() {
                     logging::info "Upgrading/Installing pip for virtual environment"
                     easy_install pip==9.0.1
                     pip install pip==9.0.1 
-                    pip install setuptools --upgrade
-                    pip install setuptools --upgrade
+                    pip install setuptools
                     pip install wheel
                 fi
             EOF
@@ -432,7 +431,13 @@ cases::create() {
 
     if [ -d "${_path}/Environment" ] || virtualenv::create "${_path}/Environment"
     then
-        ( . "${_path}/Environment/bin/activate" && python -m pip install pip wheel==0.31 setuptools --upgrade)
+        (
+            if . "${_path}/Environment/bin/activate" && python -m pip install pip
+            then
+                python -m pip install wheel setuptools ||
+                python -m pip install wheel==0.31 setuptools==40.0.0
+            fi
+        )
     else
         logging::fatal "Cannot prepare virtualenv in '${_path}'"
     fi
