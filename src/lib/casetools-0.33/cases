@@ -232,7 +232,7 @@ cases::requirements() {
     else
         logging::warning "Writing new requirements into '${_case_folder}'"
         echo "$@" > "${_case_folder}/REQUIREMENTS"
-    fi    
+    fi
 }
 
 cases::description() {
@@ -379,15 +379,14 @@ cases::create() {
                     ls -1 "$(casetool --where)/Tools"
                 }
             '
-            
+
             m4 --prefix-builtins <<"            EOF" | sed -e 's/^                //g'
                 if [ $(bc <<< "$(((pip --version 2>/dev/null || echo 0 0) | awk '{print $2;}' || echo 0.0) | sed -e 's/\([0-9]*[\.][0-9]*\)[\.][0-9]*/\1/g') < 9.0") = 1 ]
                 then
                     logging::info "Upgrading/Installing pip for virtual environment"
                     easy_install pip==9.0.1
-                    pip install pip==9.0.1 
-                    pip install setuptools --upgrade
-                    pip install setuptools --upgrade
+                    pip install pip==9.0.1
+                    pip install setuptools
                     pip install wheel
                 fi
             EOF
@@ -403,11 +402,11 @@ cases::create() {
             echo "Icon=desktop"
         } > "${_desktop}/.directory"
 
-        format_desktop_item "${_name}" "casetool --case='${_name}' --browse" >"${_desktop}/Browse"
-        format_desktop_item "${_name}" "konsole -p colors=Casetool -e casetool --case='${_name}' --console" >"${_desktop}/Console"
-        format_desktop_item "${_name}" "caseclone --case='${_name}' --url='%U'" >"${_desktop}/Clone"
-        format_desktop_item "${_name}" "casenote --case='${_name}'" >"${_desktop}/Add a Note"
-        format_desktop_item "${_name}" "casetool --case='${_name}' --exec 'touch -a CLOSED'" >"${_desktop}/Close Issue"
+        format_desktop_item "${_name}" "casetool --case='${_name}' --browse" >"${_desktop}/Browse.desktop"
+        format_desktop_item "${_name}" "konsole -p colors=Casetool -e casetool --case='${_name}' --console" >"${_desktop}/Console.desktop"
+        format_desktop_item "${_name}" "caseclone --case='${_name}' --url='%U'" >"${_desktop}/Clone.desktop"
+        format_desktop_item "${_name}" "casenote --case='${_name}'" >"${_desktop}/Add a Note.desktop"
+        format_desktop_item "${_name}" "casetool --case='${_name}' --exec 'touch -a CLOSED'" >"${_desktop}/Close Issue.desktop"
 
         if make_python_console_script > "${_tools}/python_console"
         then
@@ -432,7 +431,13 @@ cases::create() {
 
     if [ -d "${_path}/Environment" ] || virtualenv::create "${_path}/Environment"
     then
-        ( . "${_path}/Environment/bin/activate" && python -m pip install pip wheel==0.31 setuptools --upgrade)
+        (
+            if . "${_path}/Environment/bin/activate" && python -m pip install pip
+            then
+                python -m pip install wheel setuptools ||
+                python -m pip install wheel==0.31 setuptools==40.0.0
+            fi
+        )
     else
         logging::fatal "Cannot prepare virtualenv in '${_path}'"
     fi
