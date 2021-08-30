@@ -1,6 +1,6 @@
 PACKAGE_NAME := casetools
 PACKAGE_VERSION := $(shell bash -c '. src/lib/$(PACKAGE_NAME) 2>/dev/null; casetools::version')
-INSTALL_PATH := $(or $(shell python -c 'import sys; print(sys.prefix if hasattr(sys, "real_prefix") or hasattr(sys, "base_prefix") else "")'), "/usr/local")
+INSTALL_PATH := $(shell python -c 'import sys; sys.stdout.write("{}\n".format(sys.prefix)) if hasattr(sys, "real_prefix") or hasattr(sys, "base_prefix") else exit(255)' 2>/dev/null || echo "/usr/local")
 LIB_COMPONENTS := $(wildcard src/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/*)
 BIN_COMPONENTS := $(foreach name, $(wildcard src/bin/*), build/bin/$(notdir $(name)))
 PNG_COMPONENTS := $(wildcard src/png/*)
