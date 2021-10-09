@@ -65,6 +65,36 @@ create_project=false
 #===================================================================================
 #                           Command line option handlers
 #===================================================================================
+select_local() {
+    local _root_folder _current_folder
+    
+    if ! _root_folder="$(casetools::cases::path)"
+    then
+        return $?
+    elif ! _current_folder="$(readlink -f "$(pwd)")"
+    then
+        return $?
+    fi
+
+    local _length="$(echo -n "${_root_folder}" | wc -c)"
+    local _head="$(echo -n "${_current_folder}" | cut --characters=1-${_length})"
+
+    if [ "${_head}" != "${_root_folder}" ]
+    then
+        logging::error "current directory '${_current_folder}' is not in a project folder"
+        return $?
+    fi
+
+    local _case="$(
+        echo "${_current_folder}" |
+        cut --characters=$((_length + 2))- |
+        awk -F/ '{print $1;}' |
+        url::decode
+    )"
+
+    select_project "${_case}"
+}
+
 select_project() {
     if [ -n "${1}" ]
     then
@@ -281,6 +311,7 @@ optionslib::parse::config "
     long_options=--version short_options=-v action=command name=casetools::version description='Produce the library version string'
     long_options=--commands action=command name=casetools::subcommands description='List available subcommands'
     long_options=--case:: action=command name=select_project description='Select a project or provide the currently selected project'
+    long_options=--here action=command name=select_local description='Select the project in the current directory tree'
     long_options=--shell,--console action=command name=execute_project_console description='Run a console shell in the selected project virtualenv'
     long_options=--browse action=command name=open_project_browser description='Open a file browser in the project home directory'
     long_options=--exec: action=command name=execute_project_command description='Run a shell command in the selected project virtualenv'

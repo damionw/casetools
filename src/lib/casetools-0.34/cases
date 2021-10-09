@@ -15,7 +15,7 @@ cases::module() {
     fi
 
     # Update requirements file
-    cases::requirements "$((echo ${_url}; cases::requirements) | sort -u)"
+    cases::requirements "$((echo "${_url}"; cases::requirements) | sort -u)"
 }
 
 cases::list() {
