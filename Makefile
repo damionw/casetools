@@ -4,9 +4,8 @@ INSTALL_PATH := $(shell python -c 'import sys; sys.stdout.write("{}\n".format(sy
 LIB_COMPONENTS := $(wildcard src/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/*)
 BIN_COMPONENTS := $(foreach name, $(wildcard src/bin/*), build/bin/$(notdir $(name)))
 PNG_COMPONENTS := $(wildcard src/png/*)
-DIR_COMPONENTS := $(foreach name, bin share lib, build/$(name)) packages
+DIR_COMPONENTS := $(foreach name, bin share lib, build/$(name)) packages tools
 DEBIAN_ARCHIVE := packages/$(PACKAGE_NAME)-$(PACKAGE_VERSION).deb
-UPLOAD_REPO := /repository/share/Software/Platform/linux/private
 
 .PHONY: tests clean help
 
@@ -19,16 +18,16 @@ build: build/lib/$(PACKAGE_NAME) build/share/$(PACKAGE_NAME)/png $(BIN_COMPONENT
 
 deb: $(DEBIAN_ARCHIVE)
 
-upload: deb
-	@rsync -avz $(DEBIAN_ARCHIVE) $(UPLOAD_REPO)/
-
-$(DEBIAN_ARCHIVE): build packages
-	@debianizer \
+$(DEBIAN_ARCHIVE): build packages tools/debianizer
+	@tools/debianizer \
 		--source=build \
 		--root=/usr/local \
 		--target="$@" \
 		--package="$(PACKAGE_NAME)" \
 		--version="$(PACKAGE_VERSION)"
+
+	@dpkg --info $@
+	@dpkg --contents $@
 
 install-private: tests $(HOME)/bin
 	@echo "Privately installing into directory '$(HOME)'"
@@ -69,6 +68,9 @@ build/share/$(PACKAGE_NAME)/png: build/share/$(PACKAGE_NAME) $(PNG_COMPONENTS)
 build/bin/%: build/lib/$(PACKAGE_NAME) build/bin | src/bin
 	@install -m 755 src/bin/$(notdir $@) $@
 
+#=======================================================================
+#
+#=======================================================================
 src/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/option_parsing: checkouts/optionslib
 	@cd $< && make all
 	@cp $</build/lib/optionslib-$$($</build/bin/optionslib --version)/parse $@
@@ -81,11 +83,23 @@ src/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/settings: checkouts/bashlib
 	@cd $< && make all
 	@cp $</build/lib/bashLib-$$($</build/bin/bashlib --version)/settings $@
 
+tools/debianizer: checkouts/packagetools tools
+	@cp $</source/bin/$(notdir $@) $@
+
+#=======================================================================
+#
+#=======================================================================
 checkouts/optionslib:
 	@git clone https://github.com/damionw/optionslib.git $@
 
 checkouts/bashlib:
 	@git clone https://github.com/damionw/bashlib.git $@
 
+checkouts/packagetools: checkouts
+	@(cd "$@" >/dev/null 2>&1 && git pull) || git clone -q http://git:git@git/Packages/Development/PackagingTools.git $@ || true
+
+#=======================================================================
+#
+#=======================================================================
 $(DIR_COMPONENTS):
 	@install -d $@
