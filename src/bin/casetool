@@ -92,13 +92,14 @@ select_local() {
         url::decode
     )"
 
-    select_project "${_case}"
+    select_project "${_case}" "${_current_folder}"
 }
 
 select_project() {
     if [ -n "${1}" ]
     then
         _name="${1}"
+        _switch_to_folder="${2}"
         _case="$(echo "${_name}" | url::encode)"
         _case_folder="${CASETOOLS_BASE}/${_case}"
         _just_created=false
@@ -121,6 +122,19 @@ select_project() {
             logging::warning "Selected virtual environment in '$(virtualenv::path)'"
             export CASETOOLS_CASE="${_case}" CASETOOLS_HOME="${CASETOOLS_BASE}/${_case}"
             export LD_LIBRARY_PATH="$(virtualenv::path)/lib:${LD_LIBRARY_PATH}"
+            
+            if [ -z "${_switch_to_folder}" ]
+            then
+                :
+            elif [ ! -d "${_switch_to_folder}" ]
+            then
+                :
+            elif ! cd "${_switch_to_folder}"
+            then
+                logging::warning "Can't switch to chosen folder '${_switch_to_folder}'"
+            else
+                logging::warning "Switching to chosen folder '${_switch_to_folder}'"
+            fi
         else
             logging::fatal "Cannot select virtual environment in '${_case_folder}'"
         fi
