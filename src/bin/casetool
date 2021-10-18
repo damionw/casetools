@@ -162,8 +162,7 @@ execute_project_console() {
         konsoleprofile colors=Casetool 2>/dev/null || true
 
         (
-            cd "${_folder}" &&
-            _rc_options="$(test -f .profile && echo --posix || echo --norc)" &&
+            _rc_options="$(test -f "${_folder}/.profile" && echo --posix || echo --norc)" &&
             ENV="${_folder}/.profile" HISTFILE="${_folder}/.bash_history" PS1="[${_case}]> " exec bash --noprofile ${_rc_options} -i <&2 >&2
         )
 
