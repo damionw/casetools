@@ -70,10 +70,10 @@ select_local() {
     
     if ! _root_folder="$(casetools::cases::path)"
     then
-        return $?
+        exit $?
     elif ! _current_folder="$(readlink -f "$(pwd)")"
     then
-        return $?
+        exit $?
     fi
 
     local _length="$(echo -n "${_root_folder}" | wc -c)"
@@ -82,7 +82,7 @@ select_local() {
     if [ "${_head}" != "${_root_folder}" ]
     then
         logging::error "current directory '${_current_folder}' is not in a project folder"
-        return $?
+        exit $?
     fi
 
     local _case="$(
@@ -92,7 +92,10 @@ select_local() {
         url::decode
     )"
 
-    select_project "${_case}" "${_current_folder}"
+    if ! select_project "${_case}" "${_current_folder}"
+    then
+        exit $?
+    fi
 }
 
 select_project() {
@@ -122,11 +125,13 @@ select_project() {
             logging::warning "Selected virtual environment in '$(virtualenv::path)'"
             export CASETOOLS_CASE="${_case}" CASETOOLS_HOME="${CASETOOLS_BASE}/${_case}"
             export LD_LIBRARY_PATH="$(virtualenv::path)/lib:${LD_LIBRARY_PATH}"
-            
+
             if [ -z "${_switch_to_folder}" ]
             then
-                :
-            elif [ ! -d "${_switch_to_folder}" ]
+                _switch_to_folder="${_case_folder}"
+            fi
+
+            if [ ! -d "${_switch_to_folder}" ]
             then
                 :
             elif ! cd "${_switch_to_folder}"
