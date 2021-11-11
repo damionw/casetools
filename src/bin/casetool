@@ -67,7 +67,7 @@ create_project=false
 #===================================================================================
 select_local() {
     local _root_folder _current_folder
-    
+
     if ! _root_folder="$(casetools::cases::path)"
     then
         exit $?
@@ -303,8 +303,17 @@ refresh_project_dependencies() {
 
 get_project_folder() {
     local _folder
-    _folder="$(cases::selected)" && echo "${_folder}"
-    exit $?
+
+    if ! _folder="$(cases::selected)${1:+/}${1}"
+    then
+        return 253
+    elif [ ! -e "${_folder}" ]
+    then
+        logging::error "${_folder} doesn't exist"
+        return 253
+    else
+        echo "${_folder}"
+    fi
 }
 
 open_project_browser() {
@@ -333,7 +342,7 @@ optionslib::parse::config "
     long_options=--shell,--console action=command name=execute_project_console description='Run a console shell in the selected project virtualenv'
     long_options=--browse action=command name=open_project_browser description='Open a file browser in the project home directory'
     long_options=--exec: action=command name=execute_project_command description='Run a shell command in the selected project virtualenv'
-    long_options=--where action=command name=get_project_folder description='Display the project home directory'
+    long_options=--where:: action=command name=get_project_folder description='Display the project home directory'
     long_options=--requirements action=command name=cases::requirements description='List the project existing dependencies'
     long_options=--update action=command name=refresh_project_dependencies description='Refresh all of the project dependencies'
     long_options=--description:: action=command name=cases::description description='Provide or display the project description'
@@ -351,7 +360,5 @@ optionslib::parse::config "
     long_options=--exclude: action=command name=add_excluded_project description='Add folder to exclude from archiving'
 "
 
-if ! optionslib::parse::parse_arguments "$@"
-then
-    exit $?
-fi
+# if ... then swallows the error code in $?
+optionslib::parse::parse_arguments "$@" || exit $?

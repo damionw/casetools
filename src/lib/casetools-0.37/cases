@@ -120,7 +120,7 @@ cases::label_to_folder() {
 cases::selected() {
     if [ -z "${CASETOOLS_CASE}" ]
     then
-        logging::fatal "No individual case has been selected"
+        logging::error "No individual case has been selected"
         return 255
     else
         cases::label_to_folder "${CASETOOLS_CASE}"
@@ -363,9 +363,11 @@ cases::create() {
 
             sed -e 's/^                //g' <<< '
                 pip() {
+                    local _pkg_folder="$(casetool --where)/Packages"
+
                     if [ "$1" = "install" ]
                     then
-                        "$(which pip)" "$@" --find-links "$(casetool --where)/Packages"
+                        "$(which pip)" "$@" $(test -n "${_pkg_folder}" -a -d "${_pkg_folder}" && echo --find-links "${_pkg_folder}")
                     else
                         "$(which pip)" "$@"
                     fi
