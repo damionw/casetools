@@ -10,13 +10,6 @@ library_import_file="$(readlink -f "${local_path}/../lib/casetools")"
 #===================================================================================
 . "${library_import_file}"
 
-if [ $(bc <<< "$(bashlib --version) >= 0.22") = 1 ] && . "$(bashlib --lib)"
-then
-    :
-else
-    logging::fatal "bashlib module requirement not satistified"
-fi
-
 #===================================================================================
 #                              Logging Options
 #===================================================================================
