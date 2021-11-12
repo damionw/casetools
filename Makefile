@@ -53,6 +53,7 @@ realclean: clean
 build/lib/$(PACKAGE_NAME): build/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION) build/lib src/lib/$(PACKAGE_NAME) \
 	src/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/option_parsing \
 	src/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/settings \
+	src/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/virtualenv \
 	src/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/logging
 	@install -m 755 src/lib/$(PACKAGE_NAME) $@
 
@@ -82,6 +83,10 @@ src/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/logging: checkouts/bashlib
 src/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/settings: checkouts/bashlib
 	@cd $< && make all
 	@cp $</build/lib/bashLib-$$($</build/bin/bashlib --version)/settings $@
+
+src/lib/$(PACKAGE_NAME)-$(PACKAGE_VERSION)/virtualenv: checkouts/bashlib
+	@cd $< && make all
+	@cp $</build/lib/bashLib-$$($</build/bin/bashlib --version)/virtualenv $@
 
 tools/debianizer: checkouts/packagetools tools
 	@cp $</source/bin/$(notdir $@) $@
