@@ -68,11 +68,17 @@ create_project=false
 select_local() {
     local _root_folder _current_folder
 
-    if ! _root_folder="$(casetools::cases::path)"
+    if _root_folder="$(casetools::cases::path)"
     then
+        :
+    else
         exit $?
-    elif ! _current_folder="$(readlink -f "$(pwd)")"
+    fi
+
+    if _current_folder="$(readlink -f "$(pwd)")"
     then
+        :
+    else
         exit $?
     fi
 
@@ -92,8 +98,10 @@ select_local() {
         url::decode
     )"
 
-    if ! select_project "${_case}" "${_current_folder}"
+    if select_project "${_case}" "${_current_folder}"
     then
+        :
+    else
         exit $?
     fi
 }
@@ -110,14 +118,17 @@ select_project() {
         if [ -d "${_case_folder}" ]
         then
             :
-        elif ! ${create_project}
+        elif ${create_project}
         then
-            logging::fatal "Will not create a new case '${_case}' in '${_case_folder}'"
-        elif ! cases::create "${_case_folder}" "${_name}"
-        then
-            logging::fatal "Cannot create case in '${_case_folder}'"
+            if cases::create "${_case_folder}" "${_name}"
+            then
+                _just_created=true
+            else
+                logging::error "Cannot create case in '${_case_folder}'"
+                return $?
+            fi
         else
-            _just_created=true
+            logging::fatal "Will not create a new case '${_case}' in '${_case_folder}'"
         fi
 
         if . "${_case_folder}/Environment/bin/activate"
@@ -182,11 +193,8 @@ execute_project_command() {
 
     _command="${1}"
 
-    if ! _folder="$(cases::selected)" _case="$(cases::case)"
+    if _folder="$(cases::selected)" _case="$(cases::case)"
     then
-        logging::fatal "No environment selected"
-        _status=$?
-    else
         logging::warning "Entering environment $(virtualenv::path)"
 
         (
@@ -196,6 +204,9 @@ execute_project_command() {
         _status=$?
 
         logging::warning "Exiting environment $(virtualenv::path)"
+    else
+        logging::fatal "No environment selected"
+        _status=$?
     fi
 
     exit ${_status}
@@ -304,10 +315,14 @@ refresh_project_dependencies() {
 get_project_folder() {
     local _folder
 
-    if ! _folder="$(cases::selected)${1:+/}${1}"
+    if _folder="$(cases::selected)${1:+/}${1}"
     then
-        return 253
-    elif [ ! -e "${_folder}" ]
+        :
+    else
+        return $?
+    fi
+
+    if [ ! -e "${_folder}" ]
     then
         logging::error "${_folder} doesn't exist"
         return 253
@@ -360,5 +375,9 @@ optionslib::parse::config "
     long_options=--exclude: action=command name=add_excluded_project description='Add folder to exclude from archiving'
 "
 
-# if ... then swallows the error code in $?
-optionslib::parse::parse_arguments "$@" || exit $?
+if optionslib::parse::parse_arguments "$@"
+then
+    : # if ! ... resets $?
+else
+    exit $?
+fi
