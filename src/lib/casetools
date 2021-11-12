@@ -38,6 +38,7 @@ export CASETOOLS_SHARE="${share_path}"
 . "${lib_path}/notebooks"
 . "${lib_path}/suites"
 . "${lib_path}/settings"
+. "${lib_path}/virtualenv"
 . "${lib_path}/url"
 
 casetools::version() {
