@@ -292,13 +292,14 @@ cases::create() {
             sys.path[:0] = filter(lambda _x: _x is not None, [os.environ.get("GPS_SOURCE", None)])
 
             from subprocess import Popen, PIPE
+            from itertools import chain
 
             import logging
 
             fifo = Popen("casetool --where", shell=True, stdin=None, stdout=PIPE)
 
             for _row in fifo.communicate():
-                root_folder = _row.split("\n")[0].strip()
+                root_folder = _row.decode("utf-8").split("\n")[0].strip()
                 break
             else:
                 exit(255)
@@ -313,7 +314,7 @@ cases::create() {
 
             #--------------------------------- CUT HERE -------------------------------------
 
-            __import__("code").interact(local=dict(globals().items() + locals().items()))
+            __import__("code").interact(local=dict(chain(globals().items(), locals().items())))
         EOF
     }
 
@@ -412,6 +413,7 @@ cases::create() {
 
         if make_python_console_script > "${_tools}/python_console"
         then
+            chmod ugo+rx "${_tools}/python_console"
             format_desktop_item "${_name}" "konsole -p colors=Casetool --noclose -e casetool --case='${_name}' --exec=python_console" > "${_desktop}/Python Console"
         fi
 
