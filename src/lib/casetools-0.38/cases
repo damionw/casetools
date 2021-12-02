@@ -314,7 +314,7 @@ cases::create() {
 
             #--------------------------------- CUT HERE -------------------------------------
 
-            __import__("code").interact(local=dict(chain(globals().items(), locals().items())))
+            __import__("code").interact(local=dict(__import__("itertools").chain(globals().items(), locals().items()))) ### DEBUG ###
         EOF
     }
 
