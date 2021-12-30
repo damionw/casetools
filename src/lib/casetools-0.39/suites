@@ -139,7 +139,7 @@ cases::suites::update_project_services() {
                 echo '    :'
                 echo '}'
                 echo 'reactor::run() {'
-                echo "    casetool --case='${_case}' --exec='start_service'"
+                echo "    casetool --case='${_case}' --exec='exec start_service'"
                 echo '}'
             } > "${_folder}/${_new_service}"
         done <<< "${_need_installation}"
