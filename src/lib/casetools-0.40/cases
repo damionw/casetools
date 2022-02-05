@@ -331,7 +331,7 @@ cases::create() {
             echo '#! /usr/bin/env bash'
             echo 'set +o posix # Turn off Posix mode set by environment launcher'
             # echo '. $(bashlib --lib)'
-            echo 'export PATH="$(readlink -f $(casetool --where)/Tools):$PATH"'
+            echo 'export PATH="$(casetool --where)/Tools:$PATH"'
 
             sed -e 's/^                //g' <<< '
                 cd() {
@@ -368,17 +368,19 @@ cases::create() {
                 tools() {
                     ls -1 "$(casetool --where)/Tools"
                 }
+
+                export -f tools
             '
 
-            m4 --prefix-builtins <<"            EOF" | sed -e 's/^                //g'
-                if [ $(bc <<< "$(((pip --version 2>/dev/null || echo 0 0) | awk '{print $2;}' || echo 0.0) | sed -e 's/\([0-9]*[\.][0-9]*\)[\.][0-9]*/\1/g') < 9.0") = 1 ]
-                then
-                    logging::info "Upgrading/Installing pip for virtual environment"
-                    easy_install pip==9.0.1
-                    pip install pip==9.0.1
-                    pip install setuptools
-                    pip install wheel
-                fi
+#             m4 --prefix-builtins <<"            EOF" | sed -e 's/^                //g'
+#                 if [ $(bc <<< "$(((pip --version 2>/dev/null || echo 0 0) | awk '{print $2;}' || echo 0.0) | sed -e 's/\([0-9]*[\.][0-9]*\)[\.][0-9]*/\1/g') < 9.0") = 1 ]
+#                 then
+#                     logging::info "Upgrading/Installing pip for virtual environment"
+#                     easy_install pip==9.0.1
+#                     pip install pip==9.0.1
+#                     pip install setuptools
+#                     pip install wheel
+#                 fi
             EOF
         } >> "${_path}/.profile"
 
