@@ -285,36 +285,23 @@ cases::create() {
     make_python_console_script() {
         sed -e 's/^            //g' <<'        EOF'
             #!/usr/bin/env python
-
-            import sys
-            import os
-
-            sys.path[:0] = filter(lambda _x: _x is not None, [os.environ.get("GPS_SOURCE", None)])
+            import logging
 
             from subprocess import Popen, PIPE
             from itertools import chain
 
-            import logging
-
             fifo = Popen("casetool --where", shell=True, stdin=None, stdout=PIPE)
-
-            for _row in fifo.communicate():
-                root_folder = _row.decode("utf-8").split("\n")[0].strip()
-                break
-            else:
-                exit(255)
+            root_folder = fifo.communicate()[0].splitlines()[0].strip().decode("utf8")
 
             from traceback import format_exc
 
             logging.basicConfig(level=logging.INFO)
-
-            LOG = logging.getLogger(__name__)
-
             #--------------------------------- CUT HERE -------------------------------------
 
             #--------------------------------- CUT HERE -------------------------------------
-
-            __import__("code").interact(local=dict(__import__("itertools").chain(globals().items(), locals().items()))) ### DEBUG ###
+            __import__("code").interact(
+                local=dict(__import__("itertools").chain(globals().items(), locals().items()))
+            )
         EOF
     }
 
