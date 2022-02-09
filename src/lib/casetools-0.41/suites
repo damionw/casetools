@@ -1,0 +1,166 @@
+#! /usr/bin/env bash
+
+first_name="${BASH_SOURCE[0]}"
+actual_name="$(readlink -f "${first_name}")"
+local_path="$(dirname "${actual_name}")"
+
+. "${lib_path}/logging"
+. "${lib_path}/cases"
+
+cases::suites::get_sentinel() {
+    echo "__CASETOOL_REACTOR__"
+}
+
+cases::suites::folder() {
+    local _folder=${HOME}/.suites/Cases
+
+    if [ -d "${_folder}" ]
+    then
+        :
+    elif mkdir -p "${_folder}"
+    then
+        logging::warning "Created folder '${_folder}'"
+    else
+        logging::error "Can't access or create folder '${_folder}'"
+        return 255
+    fi
+
+    echo "${_folder}"
+}
+
+cases::suites::get_installation_files() {
+    local _folder
+
+    if ! _folder="$(cases::suites::folder)"
+    then
+        return $?
+    fi
+
+    local _sentinel="$(cases::suites::get_sentinel)"
+    local _reactor
+
+    find "${_folder}" -maxdepth 1 -mindepth 1 -type f -print | while read _reactor
+    do
+        if grep -q '^#'"${_sentinel}"'$' < "${_reactor}"
+        then
+            echo "${_reactor}"
+        fi
+    done
+}
+
+cases::suites::get_installed_services() {
+    local _reactor
+
+    cases::suites::get_installation_files | while read _reactor
+    do
+        basename "${_reactor}"
+    done
+}
+
+cases::suites::get_eligible_services() {
+    local _project
+
+    cases::list | while read _project
+    do
+        local _folder
+
+        if ! _folder="$(cases::label_to_folder "$(cases::name_to_label "${_project}")")"
+        then
+            logging::warning "Skipping broken folder '${_folder}'"
+            continue
+        fi
+
+        local _service_script="${_folder}/Tools/start_service"
+
+        if [ -f "${_service_script}" ]
+        then
+            basename "${_folder}"
+        fi
+    done
+}
+
+cases::suites::update_project_services() {
+    local _eligible _installed _row _folder
+
+    if ! _eligible="$(cases::suites::get_eligible_services)"
+    then
+        logging::error "Can't determine eligible project services"
+        return 123
+    elif ! _installed="$(cases::suites::get_installed_services)"
+    then
+        logging::error "Can't determine installed project services"
+        return 124
+    elif ! _folder="$(cases::suites::folder)"
+    then
+        return $?
+    fi
+
+    local _need_installation="$(
+        echo "${_eligible}" | while read _row
+        do
+            if (echo "${_installed}" | grep -q '^'"${_row}"'$')
+            then
+                continue
+            fi
+
+            echo "${_row}"
+        done
+    )"
+
+    local _need_removal="$(
+        echo "${_installed}" | while read _row
+        do
+            if (echo "${_eligible}" | grep -q '^'"${_row}"'$')
+            then
+                continue
+            fi
+
+            echo "${_row}"
+        done
+    )"
+
+    local _sentinel="$(cases::suites::get_sentinel)"
+    local _new_service _old_service
+
+    if [ -n "${_need_installation}" ]
+    then
+        while read _new_service
+        do
+            local _case="$(cases::label_to_name "${_new_service}")"
+
+            logging::warning "Installing reactor for project '$(cases::label_to_name "${_new_service}")'"
+
+            {
+                echo '#!/usr/bin/env bash'
+                echo
+                echo "#${_sentinel}"
+                echo
+                echo 'reactor::depends() {'
+                echo '    :'
+                echo '}'
+                echo 'reactor::run() {'
+                echo "    casetool --case='${_case}' --exec='exec start_service'"
+                echo '}'
+            } > "${_folder}/${_new_service}"
+        done <<< "${_need_installation}"
+    fi
+
+    if [ -n "${_need_removal}" ]
+    then
+        while read _old_service
+        do
+            logging::warning "Removing reactor for project '$(cases::label_to_name "${_old_service}")'"
+            rm "${_folder}/${_old_service}"
+        done <<< "${_need_removal}"
+    fi
+}
+
+cases::suites::remove_project_services() {
+    local _reactor
+
+    cases::suites::get_installation_files | while read _reactor
+    do
+        logging::warning "Removing reactor for project '$(cases::label_to_name "$(basename "${_reactor}")")'"
+        rm "${_reactor}"
+    done
+}

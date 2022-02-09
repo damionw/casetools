@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+
+#===================================================================================
+#                          Import tools library
+#===================================================================================
+. "$(casetool --lib)"
+
+#===================================================================================
+#                              Logging Options
+#===================================================================================
+logging::set_severity info
+
+#===================================================================================
+#                              Help Message
+#===================================================================================
+showhelp() {
+    local _synopsis="
+        Maintain Suites service startups
+    "
+
+    local -A _keywords=(
+        [update]="Maintain projects as suite services"
+        [list]="List currently installed suite services"
+        [remove]="Remove all managed suite services"
+        [debug]="Expose debug level logging"
+        [info]="Expose normal level logging"
+        [warning]="Expose error level logging"
+        [error]="Expose error level logging"
+        [fatal]="Expose fatal error level logging"
+        [version]="Produce the version string"
+        [help]="Display instructions"
+    )
+
+    local _terms="$(echo "${@}" | awk -F, '{for (i=1; i <= NF; ++i) {print $i;}}')"
+    local _topic
+
+    local _contents="$(
+        echo "${_terms}" | awk -F: '{printf("%s[--%s%s]", sep, $1, (NF == 2 ? sprintf("=<%s>", $1) : "")); sep=" "}'
+        echo -en "${_synopsis:+\n}"
+        echo "${_synopsis}" | sed -e 's/^[ ]*//g' -e '/^[ ]*$/d'
+
+        echo "${_terms}" | {
+            _prefix="\n"
+
+            while read _topic
+            do
+                if [ -n "${_keywords["${_topic}"]}" ]
+                then
+                    _fill="$(for ((i=$(echo -n "${_topic}" | wc -c); i < 15; ++i)); do echo -n " "; done)"
+                    echo -e "${_prefix}--${_topic}${_fill}${_keywords["${_topic}"]}" | sed -e 's/^./    &/g'
+                    _prefix=""
+                fi
+            done
+        }
+    )"
+
+    echo -e "Usage: $0 ${_contents}\n" >&2
+}
+
+#===================================================================================
+# NOTE: There is a bug in getopts where not specifying at least one short option
+#       will cause the first non option parameter to be discarded. Here, we just
+#       use -h (help)
+#===================================================================================
+long_options="help,version,debug,info,warning,error,fatal,version,update,remove,list"
+
+OPTION_TEMP=$(getopt -a -o hv --long ${long_options} -- "$@")
+
+if [ $? != 0 ]
+then
+    logging::fatal "Invalid command line options ${OPTION_TEMP}"
+fi
+
+eval set -- "$OPTION_TEMP"
+
+#===================================================================================
+#                       Process command line parameters
+#
+# NOTE: The command line parameters are available for scripts which
+#       source this file.
+#===================================================================================
+while true
+do
+    case "$1" in
+        --debug|--info|--warning|--error|--fatal)
+            logging::set_severity "$(echo "${1}" | sed -e 's/^[\-]*//g')"
+            shift
+            ;;
+
+        --list)
+            cases::suites::get_installed_services
+            shift
+            exit
+            ;;
+
+        --update)
+            cases::suites::update_project_services
+            shift
+            ;;
+
+        --remove)
+            cases::suites::remove_project_services
+            shift
+            ;;
+
+        --version)
+            casetools::version
+            exit 0
+            ;;
+
+        --)
+            shift
+            break
+            ;;
+
+        *)
+            showhelp "${long_options}" >&2
+            exit 0
+            ;;
+    esac
+done

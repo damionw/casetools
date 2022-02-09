@@ -1,0 +1,417 @@
+#! /usr/bin/env bash
+
+first_name="${BASH_SOURCE[0]}"
+actual_name="$(readlink -f "${first_name}")"
+local_path="$(dirname "${actual_name}")"
+
+cases::module() {
+    local _folder="$(cases::selected)"
+    local _url="${1}"
+
+    if ! (modules::install::install "${_url}" "${CASETOOLS_CASE}" || modules::install::install "${_url}")
+    then
+        logging::error "Cannot install required module '${_url}'"
+        return 255
+    fi
+
+    # Update requirements file
+    cases::requirements "$((echo "${_url}"; cases::requirements) | sort -u)"
+}
+
+cases::list() {
+    local _base_folder="${CASETOOLS_BASE}"
+    local _mode="${1:-all}"
+    local _case
+
+    if [ ! -d "${_base_folder}" ]
+    then
+        logging::error "No Cases home domain has been selected"
+        return 255
+    fi
+
+    find "${_base_folder}" -mindepth 1 -maxdepth 1 -type d ! -name '.*' -printf "%f\n" | while read _case
+    do
+        local _closed=$(test -e "${_base_folder}/${_case}/CLOSED" && echo true || echo false)
+        local _name="$(cases::label_to_name "${_case}")"
+
+        if [ "${_mode}" = "all" ]
+        then
+            :
+        elif [ "${_mode}" = "open" ]
+        then
+            ${_closed} && continue
+        elif [ "${_mode}" = "closed" ]
+        then
+            ${_closed} || continue
+        elif (casetool::fetch_tags "${_base_folder}/${_case}" | grep -iq '^'"${_mode}"'$')
+        then
+            :
+        else
+            continue
+        fi
+
+        echo "${_name}"
+    done | sort
+}
+
+cases::label_to_name() {
+    echo "${1}" | url::decode
+}
+
+cases::name_to_label() {
+    echo "${1}" | url::encode
+}
+
+cases::current() {
+    if [ -z "${CASETOOLS_CASE}" ]
+    then
+        logging::fatal "No individual case has been selected"
+    else
+        echo "${CASETOOLS_CASE}"
+    fi
+}
+
+cases::case() {
+    cases::label_to_name "$(cases::current)"
+}
+
+cases::project_to_folder() {
+    local _project
+    local _label
+
+    if ! _project="${1:?Need a project name}"
+    then
+        logging::error "No project provided"
+        return 255
+    elif ! _label="$(cases::name_to_label "${_project}")"
+    then
+        logging::error "Can't convert project to label"
+        return 255
+    else
+        cases::label_to_folder "${_label}"
+    fi
+}
+
+cases::label_to_folder() {
+    local _folder
+    local _label
+
+    if ! _label="${1:?Need a project label}"
+    then
+        logging::error "No project label provided"
+        return 255
+    elif [ -z "${CASETOOLS_BASE}" ]
+    then
+        logging::fatal "No Cases home domain has been selected"
+        return 255
+    elif ! _folder="${CASETOOLS_BASE}/${_label}"
+    then
+        logging::error "Can't convert project to label"
+        return 255
+    elif [ ! -d "${_folder}" ]
+    then
+        logging::error "Case folder '${_folder}' is missing"
+        return 255
+    else
+        echo "${_folder}"
+    fi
+}
+
+cases::selected() {
+    if [ -z "${CASETOOLS_CASE}" ]
+    then
+        logging::error "No individual case has been selected"
+        return 255
+    else
+        cases::label_to_folder "${CASETOOLS_CASE}"
+    fi
+}
+
+casetool::tag_registry() {
+    local _case_folder=
+
+    if ! _case_folder="${1:-$(cases::selected)}"
+    then
+        return $?
+    fi
+
+    echo "${_case_folder}/TAGS"
+}
+
+casetool::fetch_tags() {
+    local _tag_repo=
+
+    if ! _tag_repo="$(casetool::tag_registry "${1}")"
+    then
+        return $?
+    elif [ ! -f "${_tag_repo}" ]
+    then
+        :
+    elif ! cat < "${_tag_repo}" 2>/dev/null
+    then
+        return $?
+    fi
+}
+
+casetool::save_tags() {
+    # Tag content received via stdin
+
+    local _tag_repo=
+
+    if ! _tag_repo="$(casetool::tag_registry "${1}")"
+    then
+        return $?
+    elif ! (sed -e '/^[ ]*$/d' | sort -u > "${_tag_repo}")
+    then
+        return $?
+    fi
+}
+
+casetool::add_tag() {
+    local _tag=
+
+    local _new_content="$(
+        for _tag in "${@}"
+        do
+            echo ${_tag} | tr 'A-Z' 'a-z'
+        done
+    )"
+
+    if ! (echo "${_new_content}"; casetool::fetch_tags) | casetool::save_tags
+    then
+        return $?
+    fi
+}
+
+casetool::remove_tag() {
+    local _regex=
+
+    for _tag in "${@}"
+    do
+        _regex="${_regex}${_regex:+|}${_tag}"
+    done
+
+    if [ -z "${_regex}" ]
+    then
+        :
+    elif (casetool::fetch_tags | egrep -iv '^'"${_regex}"'$' | casetool::save_tags)
+    then
+        :
+    else
+        logging::error "Can't update tag repo"
+    fi
+}
+
+casetool::list_tags() {
+    local _base_folder="${CASETOOLS_BASE}"
+    local _mode="${1}"
+
+    if [ ! -d "${_base_folder}" ]
+    then
+        logging::error "No Cases home domain has been selected"
+        return 255
+    fi
+
+    case "${_mode}" in
+        all)
+            find "${_base_folder}" -mindepth 2 -maxdepth 2 -name 'TAGS' -exec cat {} \; | sort -u
+            ;;
+
+        *)
+            casetool::fetch_tags "${2}"
+            ;;
+    esac
+}
+
+cases::requirements() {
+    local _case_folder="$(cases::selected)"
+
+    if [ -z "${1}" ]
+    then
+        cat "${_case_folder}/REQUIREMENTS" 2>/dev/null || true
+    else
+        logging::warning "Writing new requirements into '${_case_folder}'"
+        echo "$@" > "${_case_folder}/REQUIREMENTS"
+    fi
+}
+
+cases::description() {
+    local _case_folder="$(cases::selected)"
+
+    if [ -z "${1}" ]
+    then
+        cat "${_case_folder}/README"
+    else
+        logging::warning "Writing new README into '${_case_folder}'"
+        echo "$@" > "${_case_folder}/README"
+    fi
+}
+
+cases::date() {
+    local _case_folder="$(cases::selected)"
+    cat "${_case_folder}/CREATED"
+}
+
+cases::create() {
+    format_desktop_item() {
+        local _label="${1:?Provide a Label}"
+        local _command="${2:?Provide a command}"
+        local _icon="${3:-/usr/share/icons/hicolor/32x32/apps/kde-windows.png}"
+
+        sed -e 's/^            //g' <<'        EOF' | m4 --prefix-builtins -DLABEL="${_label}" -DCOMMAND_LINE="${_command}" -DICON="${_icon}"
+            [Desktop Entry]
+            Comment[en_US]=LABEL
+            Comment=LABEL
+            Exec=COMMAND_LINE
+            GenericName[en_US]=LABEL
+            GenericName=LABEL
+            Icon=ICON
+            MimeType=
+            Name[en_US]=LABEL
+            Name=LABEL
+            Path=
+            StartupNotify=true
+            Terminal=false
+            TerminalOptions=
+            Type=Application
+            X-DBUS-ServiceName=
+            X-DBUS-StartupType=
+            X-KDE-SubstituteUID=false
+            X-KDE-Username=
+            X-Ubuntu-Gettext-Domain=desktop_kdebase
+        EOF
+    }
+
+    make_python_console_script() {
+        sed -e 's/^            //g' <<'        EOF'
+            #!/usr/bin/env python
+            import logging
+
+            from subprocess import Popen, PIPE
+            from itertools import chain
+
+            fifo = Popen("casetool --where", shell=True, stdin=None, stdout=PIPE)
+            root_folder = fifo.communicate()[0].splitlines()[0].strip().decode("utf8")
+
+            from traceback import format_exc
+
+            logging.basicConfig(level=logging.INFO)
+            #--------------------------------- CUT HERE -------------------------------------
+
+            #--------------------------------- CUT HERE -------------------------------------
+            __import__("code").interact(
+                local=dict(__import__("itertools").chain(globals().items(), locals().items()))
+            )
+        EOF
+    }
+
+    create_skeleton_folder() {
+        local _path="${1:?Provide a path}"
+        local _name="${2:-$(basename "${_path}")}"
+
+        mkdir -p "${_path}" &&
+        mkdir -p "${_path}/Notes" &&
+        mkdir -p "${_path}/Checkouts" &&
+        mkdir -p "${_path}/Desktop" &&
+        mkdir -p "${_path}/Documentation" &&
+        mkdir -p "${_path}/Trash" &&
+        mkdir -p "${_path}/Tools" &&
+        mkdir -p "${_path}/Data"
+
+        echo "No description for this case yet" > "${_path}/README"
+        date '+%Y-%m-%d' > ${_path}/CREATED
+
+        local _desktop="${_path}/Desktop"
+        local _tools="${_path}/Tools"
+
+        #------------------------------------
+        # Configure freedesktop files
+        #------------------------------------
+        {
+            echo '#! /usr/bin/env bash'
+            echo 'set +o posix # Turn off Posix mode set by environment launcher'
+
+            echo 'export PATH="$(casetool --where)/Tools:$PATH"'
+            echo 'export PIP_FIND_LINKS="$(casetool --where)/Packages ${PIP_FIND_LINKS}"'
+
+            sed -e 's/^                //g' <<< '
+                cd() {
+                    local _where
+
+                    if [ -n "$1" ]
+                    then
+                        command cd "${1}"
+                    elif _where="$(casetool --where)"
+                    then
+                        command cd "${_where}"
+                    else
+                        command cd "${HOME}"
+                    fi
+                }
+            '
+
+            sed -e 's/^                //g' <<< '
+                tools() {
+                    ls -1 "$(casetool --where)/Tools"
+                }
+
+                export -f tools
+            '
+            EOF
+        } >> "${_path}/.profile"
+
+        {
+            echo "[Desktop Entry]"
+            echo "Icon=/usr/share/icons/hicolor/48x48/apps/ksplash.png"
+        } > "${_path}/.directory"
+
+        {
+            echo "[Desktop Entry]"
+            echo "Icon=desktop"
+        } > "${_desktop}/.directory"
+
+        format_desktop_item "${_name}" "casetool --case='${_name}' --browse" >"${_desktop}/Browse.desktop"
+        format_desktop_item "${_name}" "konsole -p colors=Casetool -e casetool --case='${_name}' --console" >"${_desktop}/Console.desktop"
+        format_desktop_item "${_name}" "caseclone --case='${_name}' --url='%U'" >"${_desktop}/Clone.desktop"
+        format_desktop_item "${_name}" "casenote --case='${_name}'" >"${_desktop}/Add a Note.desktop"
+        format_desktop_item "${_name}" "casetool --case='${_name}' --exec 'touch -a CLOSED'" >"${_desktop}/Close Issue.desktop"
+
+        if make_python_console_script > "${_tools}/python_console"
+        then
+            chmod ugo+rx "${_tools}/python_console"
+            format_desktop_item "${_name}" "konsole -p colors=Casetool --noclose -e casetool --case='${_name}' --exec=python_console" > "${_desktop}/Python Console"
+        fi
+
+        #------------------------------------
+        #              Permissions
+        #------------------------------------
+        chmod -R u+rx "${_desktop}/." "${_tools}/."
+    }
+
+    local _path="${1:?Provide a case path}"
+    local _name="${2:-$(basename "${_path}")}"
+
+    if [ -d "${_path}" ] || create_skeleton_folder "${_path}" "${_name}"
+    then
+        :
+    else
+        logging::fatal "Cannot access or create case folder '${_path}'"
+    fi
+
+    if [ -d "${_path}/Environment" ] || virtualenv::create "${_path}/Environment"
+    then
+        (
+            if . "${_path}/Environment/bin/activate" && python -m pip install pip
+            then
+                python -m pip install wheel setuptools ||
+                python -m pip install wheel==0.31 setuptools==40.0.0
+            fi
+        )
+    else
+        logging::fatal "Cannot prepare virtualenv in '${_path}'"
+    fi
+}
+
+cases::running_in_gui() {
+    xset -q >/dev/null
+}
