@@ -27,10 +27,8 @@ cases::notebooks::install_project_kernel() {
     fi
 
     sed -e 's/^        //g' > "${_installer_filename}" <<< "
-        easy_install pip==9.0.1 &&
-        \$(which pip) install setuptools --ignore-installed &&
-        \$(which pip) install ipykernel>=4.1.1 tornado==4.4.2 --ignore-installed &&
-        python -m ipykernel install --user --name '${_label}' --display-name '${_project}' || {
+        pip install jupyter &&
+        ipython kernel install --name '${_label}' --user || {
             echo 'Failed installing kernel ${_label}' >&2
             _status=255
         }
@@ -75,7 +73,7 @@ cases::notebooks::remove_project_kernel() {
         logging::error "Can't get label for '${_project}'"
         return 255
     else
-        rm -rf "${_kernels_folder}/${_label}"
+        ipython kernelspec remove ${_label}"
     fi
 }
 
