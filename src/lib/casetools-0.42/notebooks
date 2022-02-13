@@ -73,7 +73,7 @@ cases::notebooks::remove_project_kernel() {
         logging::error "Can't get label for '${_project}'"
         return 255
     else
-        ipython kernelspec remove ${_label}"
+        ipython kernelspec remove "${_label}"
     fi
 }
 
