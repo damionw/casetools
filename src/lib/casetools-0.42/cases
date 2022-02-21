@@ -357,7 +357,6 @@ cases::create() {
 
                 export -f tools
             '
-            EOF
         } >> "${_path}/.profile"
 
         {
