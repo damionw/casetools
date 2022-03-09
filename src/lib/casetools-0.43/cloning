@@ -57,6 +57,13 @@ cases::clone() {
             _checkout_name="${_reponame}.${_branch}"
             _url="git@${_servername}:${_username}/${_reponame}.git"
         fi
+
+        if ! (git ls-remote --heads "${_url}" | grep -q '\/'"${_branch}"'$')
+        then
+            # The expected branch isn't represented, pull all branches
+            _checkout_name="${_reponame}.any"
+            _branch=
+        fi
     else
         _checkout_name="$(basename "${_url}")"
     fi
@@ -69,10 +76,10 @@ cases::clone() {
     elif "${_use_git}"
     then
         logging::info "Using url '${_url}' and branch '${_branch}'"
-        local _msg="$(LD_LIBRARY_PATH= git clone --recurse-submodules -b "${_branch}" "${_url}" "${_checkout_folder}" 2>&1)" || logging::fatal "${_msg}"
+        local _msg="$(LD_LIBRARY_PATH= git clone --recurse-submodules ${_branch:+-b} ${_branch} "${_url}" "${_checkout_folder}" 2>&1)" || logging::fatal "${_msg}"
         local _upstream="$(echo "${_url}" | sed -e 's/[\:]'"${USER}"'[\/]/:risk\//g')"
-        (cd "${_checkout_folder}" && test -f .gitmodules && git submodule update --init --recursive)
-        (cd "${_checkout_folder}" && LD_LIBRARY_PATH= git remote add upstream "${_upstream}")
+        (command cd "${_checkout_folder}" && test -f .gitmodules && git submodule update --init --recursive)
+        (command cd "${_checkout_folder}" && LD_LIBRARY_PATH= git remote add upstream "${_upstream}")
     else
         msg="$(hg clone --uncompressed "${_url}" "${_checkout_folder}" 2>&1)" || logging::fatal "$msg"
     fi

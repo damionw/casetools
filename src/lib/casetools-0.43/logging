@@ -5,7 +5,7 @@ actual_name="$(readlink -f "${first_name}")"
 local_path="$(dirname "${actual_name}")"
 
 logging::set_severity() {
-    __logging_severity__="${1}"
+    export __logging_severity__="${1}"
 }
 
 logging::get_severity() {
