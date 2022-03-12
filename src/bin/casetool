@@ -13,7 +13,7 @@ library_import_file="$(readlink -f "${local_path}/../lib/casetools")"
 #===================================================================================
 #                              Logging Options
 #===================================================================================
-logging::set_severity info
+logging::set_info_severity
 
 #===================================================================================
 #                                Execute a subcommand if required
@@ -209,10 +209,6 @@ enable_project_creation() {
     create_project=true
 }
 
-set_logging() {
-    logging::set_severity "$(echo "${1}" | sed -e 's/^[\-]*//g')"
-}
-
 show_library_path() {
     echo "${library_import_file}"
 }
@@ -337,11 +333,11 @@ optionslib::parse::description "Manage Project Cases"
 
 optionslib::parse::config "
     long_options=--help short_options=-h action=show_help description='Display instructions'
-    long_options=--debug action=command name=set_logging description='Expose debug level logging'
-    long_options=--info action=command name=set_logging  description='Expose normal level logging'
-    long_options=--warning action=command name=set_logging  description='Expose error level logging'
-    long_options=--error action=command name=set_logging  description='Expose error level logging'
-    long_options=--fatal action=command name=set_logging  description='Expose fatal error level logging'
+    long_options=--debug action=command name=logging::set_debug_severity description='Expose debug level logging'
+    long_options=--info action=command name=logging::set_info_severity description='Expose normal level logging'
+    long_options=--warning action=command name=logging::set_warning_severity description='Expose error level logging'
+    long_options=--error action=command name=logging::set_error_severity description='Expose error level logging'
+    long_options=--fatal action=command name=logging::set_fatal_severity description='Expose fatal error level logging'
     long_options=--lib action=command name=show_library_path description='Provide the library module import file'
     long_options=--version short_options=-v action=command name=casetools::version description='Produce the library version string'
     long_options=--commands action=command name=casetools::subcommands description='List available subcommands'
