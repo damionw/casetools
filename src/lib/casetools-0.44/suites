@@ -31,7 +31,7 @@ cases::suites::folder() {
 cases::suites::get_log_file() {
     local _folder _project
     _folder="$(cases::suites::folder)/.log" || return $?
-    _project=$(cases::selected) || return $?
+    _project=$(basename $(cases::selected)) || return $?
     echo "${_folder}/${_project}.log"
 }
 
