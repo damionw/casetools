@@ -28,13 +28,17 @@ cases::suites::folder() {
     echo "${_folder}"
 }
 
+cases::suites::get_log_file() {
+    local _folder _project
+    _folder="$(cases::suites::folder)/.log" || return $?
+    _project=$(cases::selected) || return $?
+    echo "${_folder}/${_project}.log"
+}
+
 cases::suites::get_installation_files() {
     local _folder
 
-    if ! _folder="$(cases::suites::folder)"
-    then
-        return $?
-    fi
+    _folder="$(cases::suites::folder)" || return $?
 
     local _sentinel="$(cases::suites::get_sentinel)"
     local _reactor

@@ -122,19 +122,14 @@ cases::selected() {
     then
         logging::error "No individual case has been selected"
         return 255
-    else
-        cases::label_to_folder "${CASETOOLS_CASE}"
     fi
+
+    cases::label_to_folder "${CASETOOLS_CASE}"
 }
 
 casetool::tag_registry() {
     local _case_folder=
-
-    if ! _case_folder="${1:-$(cases::selected)}"
-    then
-        return $?
-    fi
-
+    _case_folder="${1:-$(cases::selected)}" || return $?
     echo "${_case_folder}/TAGS"
 }
 

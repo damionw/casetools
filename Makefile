@@ -94,11 +94,13 @@ tools/debianizer: checkouts/packagetools tools
 #=======================================================================
 #
 #=======================================================================
+.PHONY: checkouts/optionslib
 checkouts/optionslib:
-	@git clone https://github.com/damionw/optionslib.git $@
+	@git clone https://github.com/damionw/optionslib.git $@ || (cd $@ && git pull || true)
 
+.PHONY: checkouts/bashlib
 checkouts/bashlib:
-	@git clone https://github.com/damionw/bashlib.git $@
+	@git clone https://github.com/damionw/bashlib.git $@ || (cd $@ && git pull || true)
 
 checkouts/packagetools: checkouts
 	@(cd "$@" >/dev/null 2>&1 && git pull) || git clone -q http://git:git@git/Packages/Development/PackagingTools.git $@ || true
