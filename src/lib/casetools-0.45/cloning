@@ -80,6 +80,7 @@ cases::clone() {
         local _upstream="$(echo "${_url}" | sed -e 's/[\:]'"${USER}"'[\/]/:risk\//g')"
         (command cd "${_checkout_folder}" && test -f .gitmodules && git submodule update --init --recursive)
         (command cd "${_checkout_folder}" && LD_LIBRARY_PATH= git remote add upstream "${_upstream}")
+        (command cd "${_checkout_folder}" && LD_LIBRARY_PATH= git config pull.rebase false)
     else
         msg="$(hg clone --uncompressed "${_url}" "${_checkout_folder}" 2>&1)" || logging::fatal "$msg"
     fi
