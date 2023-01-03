@@ -42,8 +42,22 @@ cases::clone() {
 
         if [ ${#_keys[@]} -gt 3 ]
         then
-            _branch="${_keys[$((${#_keys[@]} - 1))]}"
+            local _i _separator=
+
+            _branch=$(
+                for ((_i=3; _i < ${#_keys[@]}; ++_i)) {
+                    if [[ "${_i}" == 3 && ${_keys[${_i}]} == tree ]]
+                    then
+                        continue
+                    fi
+
+                    echo -n "${_separator}${_keys[$_i]}"
+                    _separator=/
+                }
+            )
         fi
+
+        logging::info "Specified branch ${_branch}"
 
         if (echo "${_url}" | grep -q 'github[\.]com') # Special case for github
         then
@@ -54,7 +68,7 @@ cases::clone() {
         then
             _checkout_name="$(basename "${_url}" | sed -e 's/[\.]git$//g')"
         else
-            _checkout_name="${_reponame}.${_branch}"
+            _checkout_name="${_reponame}-$(echo "${_branch}" | tr '/' '.')"
             _url="git@${_servername}:${_username}/${_reponame}.git"
         fi
 
@@ -70,9 +84,13 @@ cases::clone() {
 
     local _checkout_folder="${_root_folder}/${_checkout_name}"
 
-    if [ -e "$_checkout_folder" ]
+    [[ -d "${_checkout_folder}" ]] || mkdir -p "${_checkout_folder}" || {
+        logging::fatal "Can't create '${_checkout_folder}'"
+    }
+
+    if [[ -d "${_checkout_folder}/.git" || -d "${_checkout_folder}/.hg" ]]
     then
-        logging::fatal "Folder '${_checkout_folder}' already exists"
+        logging::fatal "Checkout already exists in folder '${_checkout_folder}'"
     elif "${_use_git}"
     then
         logging::info "Using url '${_url}' and branch '${_branch}'"
