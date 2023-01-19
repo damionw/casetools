@@ -322,7 +322,7 @@ get_project_folder() {
 
 open_project_browser() {
     local _folder
-    _folder="$(cases::selected)" && xdg-open "${_folder}"
+    _folder="$(cases::selected)" && xdg-open "${_folder}" >/dev/null 2>&1
     exit $?
 }
 
