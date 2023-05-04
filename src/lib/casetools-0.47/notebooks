@@ -28,7 +28,7 @@ cases::notebooks::install_project_kernel() {
 
     sed -e 's/^        //g' > "${_installer_filename}" <<< "
         pip install jupyter &&
-        ipython kernel install --name '${_label}' --user || {
+        python -m ipykernel install --user --name '${_label}' --display-name '${_label}' || {
             echo 'Failed installing kernel ${_label}' >&2
             _status=255
         }
