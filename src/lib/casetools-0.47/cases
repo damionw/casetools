@@ -282,18 +282,40 @@ cases::create() {
             #!/usr/bin/env python
             import logging
 
-            from subprocess import Popen, PIPE
-            from itertools import chain
-
-            fifo = Popen("casetool --where", shell=True, stdin=None, stdout=PIPE)
-            root_folder = fifo.communicate()[0].splitlines()[0].strip().decode("utf8")
+            root_folder = __import__("subprocess").Popen("casetool --where", shell=True, stdin=None, stdout=__import__("subprocess").PIPE).communicate()[0].splitlines()[0].strip().decode("utf8")
 
             from traceback import format_exc
+
+            def use_history():
+                import rlcompleter
+                import atexit
+
+                from os.path import expanduser, exists, join
+                from readline import write_history_file, read_history_file
+
+                historyPath = join(root_folder, ".pyhistory")
+
+                def save_history(historyPath=historyPath):
+                    from readline import write_history_file
+                    write_history_file(historyPath)
+
+                if exists(historyPath):
+                    read_history_file(historyPath)
+
+                atexit.register(save_history)
+
+                del (
+                    read_history_file, write_history_file, expanduser,
+                    historyPath, save_history, exists, atexit,
+                    rlcompleter,
+                )
 
             logging.basicConfig(level=logging.INFO)
             #--------------------------------- CUT HERE -------------------------------------
 
             #--------------------------------- CUT HERE -------------------------------------
+            use_history()
+
             __import__("code").interact(
                 local=dict(__import__("itertools").chain(globals().items(), locals().items()))
             )
