@@ -347,7 +347,7 @@ optionslib::parse::config "
     long_options=--browse action=command name=open_project_browser description='Open a file browser in the project home directory'
     long_options=--exec: action=command name=execute_project_command description='Run a shell command in the selected project virtualenv'
     long_options=--where:: action=command name=get_project_folder description='Display the project home directory'
-    long_options=--requirements action=command name=cases::requirements description='List the project existing dependencies'
+    long_options=--requirements:: action=command name=cases::requirements description='List the project existing dependencies'
     long_options=--update action=command name=refresh_project_dependencies description='Refresh all of the project dependencies'
     long_options=--description:: action=command name=cases::description description='Provide or display the project description'
     long_options=--module::,--modules:: action=command name=select_modules description='Provide a git package dependency or list the project existing dependencies'
