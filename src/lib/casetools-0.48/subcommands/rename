@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+#===================================================================================
+#                          Import tools library
+#===================================================================================
+. "$(casetool --lib)"
+
+#===================================================================================
+#                              Logging Options
+#===================================================================================
+logging::set_severity info
+
+#===================================================================================
+#                           Command line option handlers
+#===================================================================================
+set_logging() {
+    logging::set_severity "$(echo "${1}" | sed -e 's/^[\-]*//g')"
+}
+
+show_library_path() {
+    casetool --lib
+}
+
+show_library_version() {
+    casetool --version
+}
+
+rename_project_folder() {
+    local _src _new_name _dest _filename
+
+    _src="${1:?No source folder provided}" || return $?
+    _new_name="${2:?No destination name provided}" || return $?
+    _dest="$(dirname "${_src}")/$(basename "${_new_name}" | url::encode)"
+
+    logging::warning "Renaming [${_src}] to [${_dest}]"
+
+    local _from_pattern="$(echo "${_src}/Environment" | sed -e 's/\//\\\//g')"
+    local _to_pattern="$(echo "${_dest}/Environment" | sed -e 's/\//\\\//g')"
+
+    mv "${_src}" "${_dest}"
+
+    # See: bin/activate bin/pip3.8 bin/activate.csh bin/pip3 bin/activate.fish bin/pip
+    find "${_dest}/Environment/bin" \( -name pip* -o -name activate* \) -type f -print |
+    while read _filename
+    do
+        {
+            echo "g/${_from_pattern}/s//${_to_pattern}/g"
+            echo 'wq!'
+        } | ex "${_dest}/${_filename}"
+    done
+}
+
+select_project() {
+    if [ -n "${1}" ]
+    then
+        local _name="${1}"
+        local _case="$(echo "${_name}" | url::encode)"
+        local _case_folder="${CASETOOLS_BASE}/${_case}"
+
+        if [ -d "${_case_folder}" ]
+        then
+            selected_folder="${_case_folder}"
+        else
+            logging::error "No valid project in ${_case_folder}"
+            return $?
+
+        fi
+    elif [ -z "${selected_folder}" -o ! -d "${selected_folder}" ]
+    then
+        logging::error "No valid project selected"
+        return $?
+    else
+        echo ${selected_folder}
+    fi
+}
+#===================================================================================
+#                                  Defaults
+#===================================================================================
+declare -a extra_arguments
+selected_folder="$(casetool --where >/dev/null 2>&1)"
+
+#===================================================================================
+#                           Process command line options
+#===================================================================================
+optionslib::parse::description "Rename Project Folder"
+
+optionslib::parse::config "
+    long_options=--help short_options=-h action=show_help description='Display instructions'
+    long_options=--debug action=command name=set_logging description='Expose debug level logging'
+    long_options=--info action=command name=set_logging  description='Expose normal level logging'
+    long_options=--warning action=command name=set_logging  description='Expose error level logging'
+    long_options=--error action=command name=set_logging  description='Expose error level logging'
+    long_options=--fatal action=command name=set_logging  description='Expose fatal error level logging'
+    long_options=--lib action=command name=show_library_path description='Provide the library module import file'
+    long_options=--version short_options=-v action=command name=show_library_version description='Produce the library version string'
+    long_options=--case:: action=command name=select_project description='Select a project or provide the currently selected project'
+"
+
+optionslib::parse::extra_arguments extra_arguments
+
+if ! optionslib::parse::parse_arguments "$@"
+then
+    exit 255
+fi
+
+if [ ${#extra_arguments[@]} != 1 ]
+then
+    logging::error "No rename target provided"
+    exit 255
+fi
+
+rename_project_folder "${selected_folder}" "${extra_arguments[@]}"
