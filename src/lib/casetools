@@ -15,12 +15,30 @@ export CASETOOLS_HOME="${CASETOOLS_BASE}/${CASETOOLS_CASE}"
 #===================================================================================
 #                                Settings
 #===================================================================================
-export CASETOOLS_VERSION="$(
+export __CASETOOLS_VERSIONS__="$(
     find "${local_path}/${package_name}"-[.0-9]* -maxdepth 0 -mindepth 0 -type d -printf "%f\n" |
     awk -F- '{print $NF;}' |
-    sort -nr |
-    head -1
+    sort -nr
 )"
+
+export CASETOOLS_VERSION="$(
+    echo "${__CASETOOLS_VERSIONS__}" | {
+        if [ -z "$1" ]
+        then
+            head -1
+        elif grep '^'"$1"'$'
+        then
+            :
+        else
+            echo "No version $1 found" >&2
+        fi
+    }
+)"
+
+if [ -z "${CASETOOLS_VERSION}" ]
+then
+    return 102
+fi
 
 lib_path="${local_path}/${package_name}-${CASETOOLS_VERSION}"
 share_path="$(readlink -f "${local_path}/../share/${package_name}")"
@@ -43,6 +61,10 @@ export CASETOOLS_SHARE="${share_path}"
 
 casetools::version() {
     echo "${CASETOOLS_VERSION}"
+}
+
+casetools::versions() {
+    echo "${__CASETOOLS_VERSIONS__}"
 }
 
 casetools::subcommands::path() {

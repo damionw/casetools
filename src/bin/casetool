@@ -8,7 +8,12 @@ library_import_file="$(readlink -f "${local_path}/../lib/casetools")"
 #===================================================================================
 #                          Import tools library
 #===================================================================================
-. "${library_import_file}"
+dosource() {
+    # Do the import here to 'hide' the command line parameters from the library
+    . "${library_import_file}"
+}
+
+dosource
 
 #===================================================================================
 #                              Logging Options
@@ -340,6 +345,7 @@ optionslib::parse::config "
     long_options=--fatal action=command name=logging::set_fatal_severity description='Expose fatal error level logging'
     long_options=--lib action=command name=show_library_path description='Provide the library module import file'
     long_options=--version short_options=-v action=command name=casetools::version description='Produce the library version string'
+    long_options=--versions action=command name=casetools::versions description='Produce the available library versions'
     long_options=--commands action=command name=casetools::subcommands description='List available subcommands'
     long_options=--case:: action=command name=select_project description='Select a project or provide the currently selected project'
     long_options=--here action=command name=select_local description='Select the project in the current directory tree'
